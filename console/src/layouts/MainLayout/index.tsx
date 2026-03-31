@@ -49,6 +49,9 @@ const VoiceTranscriptionPage = lazyWithRetry(
   () => import("../../pages/Settings/VoiceTranscription"),
 );
 const AgentsPage = lazyWithRetry(() => import("../../pages/Settings/Agents"));
+const PipelineManagementPage = lazyWithRetry(
+  () => import("../../pages/Settings/Agents/PipelineManagement"),
+);
 
 const { Content } = Layout;
 
@@ -64,6 +67,7 @@ const pathToKey: Record<string, string> = {
   "/mcp": "mcp",
   "/workspace": "workspace",
   "/agents": "agents",
+  "/pipeline-management": "pipeline-management",
   "/models": "models",
   "/environments": "environments",
   "/agent-config": "agent-config",
@@ -108,6 +112,7 @@ export default function MainLayout() {
                   <Route path="/mcp" element={<MCPPage />} />
                   <Route path="/workspace" element={<WorkspacePage />} />
                   <Route path="/agents" element={<AgentsPage />} />
+                  <Route path="/pipeline-management" element={<PipelineManagementPage />} />
                   <Route path="/models" element={<ModelsPage />} />
                   <Route path="/environments" element={<EnvironmentsPage />} />
                   <Route path="/agent-config" element={<AgentConfigPage />} />

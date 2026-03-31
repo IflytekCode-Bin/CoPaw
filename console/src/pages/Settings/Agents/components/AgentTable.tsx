@@ -13,7 +13,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { EditOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, RobotOutlined, CrownOutlined } from "@ant-design/icons";
 import { EyeOff, Eye } from "lucide-react";
 import type { AgentSummary } from "../../../../api/types/agents";
 import { useTheme } from "../../../../contexts/ThemeContext";
@@ -25,6 +25,7 @@ interface AgentTableProps {
   agents: AgentSummary[];
   loading: boolean;
   reordering: boolean;
+  leaderAgent?: string | null;
   onEdit: (agent: AgentSummary) => void;
   onDelete: (agentId: string) => void;
   onToggle: (agentId: string, currentEnabled: boolean) => void;
@@ -35,6 +36,7 @@ export function AgentTable({
   agents,
   loading,
   reordering,
+  leaderAgent,
   onEdit,
   onDelete,
   onToggle,
@@ -98,6 +100,11 @@ export function AgentTable({
             {getAgentDisplayName(record, t)}
           </span>
           {!record.enabled && <Tag color="error">{t("agent.disabled")}</Tag>}
+          {leaderAgent === record.id && (
+            <Tag icon={<CrownOutlined />} color="gold">
+              {t("agent.leader", "Leader")}
+            </Tag>
+          )}
         </Space>
       ),
     },
