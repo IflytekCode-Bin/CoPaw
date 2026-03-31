@@ -21,6 +21,7 @@ import SecurityPage from "../../pages/Settings/Security";
 import TokenUsagePage from "../../pages/Settings/TokenUsage";
 import VoiceTranscriptionPage from "../../pages/Settings/VoiceTranscription";
 import AgentsPage from "../../pages/Settings/Agents";
+import PipelineManagementPage from "../../pages/Settings/Agents/PipelineManagement";
 
 const { Content } = Layout;
 
@@ -36,6 +37,7 @@ const pathToKey: Record<string, string> = {
   "/mcp": "mcp",
   "/workspace": "workspace",
   "/agents": "agents",
+  "/pipeline-management": "pipeline-management",
   "/models": "models",
   "/environments": "environments",
   "/agent-config": "agent-config",
@@ -70,6 +72,7 @@ export default function MainLayout() {
               <Route path="/mcp" element={<MCPPage />} />
               <Route path="/workspace" element={<WorkspacePage />} />
               <Route path="/agents" element={<AgentsPage />} />
+              <Route path="/pipeline-management" element={<PipelineManagementPage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/environments" element={<EnvironmentsPage />} />
               <Route path="/agent-config" element={<AgentConfigPage />} />
