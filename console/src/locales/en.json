@@ -46,7 +46,8 @@
     "environments": "Environments",
     "security": "Security",
     "tokenUsage": "Token Usage",
-    "voiceTranscription": "Voice Transcription"
+    "voiceTranscription": "Voice Transcription",
+    "pipeline": "Pipeline"
   },
   "voiceTranscription": {
     "title": "Voice Transcription",
@@ -123,7 +124,6 @@
     "updateSuccess": "Agent updated successfully",
     "updateFailed": "Failed to update agent",
     "delete": "Delete",
-
     "deleteConfirm": "Confirm Delete Agent",
     "deleteConfirmDesc": "Agent will be unavailable after deletion, but workspace files will be kept",
     "deleteSuccess": "Agent deleted successfully",
@@ -1255,5 +1255,48 @@
     "nothingToUpdate": "Please enter a new username or password",
     "passwordEmpty": "Password cannot be blank",
     "usernameEmpty": "Username cannot be blank"
+  },
+  "pipeline": {
+    "title": "Pipeline Management",
+    "description": "Create and manage multi-agent pipelines",
+    "list": "Pipelines",
+    "create": "Create Pipeline",
+    "name": "Name",
+    "type": "Type",
+    "agents": "Agents",
+    "status": "Status",
+    "updatedAt": "Updated At",
+    "execute": "Execute",
+    "history": "History",
+    "deleteConfirm": "Delete this pipeline?",
+    "namePlaceholder": "Enter pipeline name",
+    "typePlaceholder": "Select pipeline type",
+    "agentsPlaceholder": "Select agents",
+    "descriptionPlaceholder": "Enter description",
+    "input": "Input Message",
+    "inputPlaceholder": "Enter input message",
+    "executionId": "Execution ID",
+    "startedAt": "Started At",
+    "completedAt": "Completed At",
+    "loadError": "Failed to load pipelines",
+    "createSuccess": "Pipeline created successfully",
+    "createError": "Failed to create pipeline",
+    "executeSuccess": "Pipeline execution started",
+    "executeError": "Failed to execute pipeline",
+    "deleteSuccess": "Pipeline deleted successfully",
+    "deleteError": "Failed to delete pipeline",
+    "historyError": "Failed to load history",
+    "type": {
+      "sequential": "Sequential",
+      "fanout": "Fanout",
+      "conditional": "Conditional",
+      "loop": "Loop"
+    },
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
   }
 }

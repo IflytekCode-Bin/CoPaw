@@ -294,6 +294,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           icon: <SparkMcpMcpLine size={16} />,
         },
         {
+          key: "pipeline",
+          label: collapsed ? null : t("nav.pipeline", "Pipeline"),
+          icon: <SparkOtherLine size={16} />,
+        },
+        {
           key: "agent-config",
           label: collapsed ? null : t("nav.agentConfig"),
           icon: <SparkModifyLine size={16} />,
