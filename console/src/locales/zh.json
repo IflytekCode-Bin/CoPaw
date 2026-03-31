@@ -1259,5 +1259,48 @@
     "transcriptionInfoTitle": "转写工作原理",
     "transcriptionInfoDesc": "Whisper API 转写使用 OpenAI 兼容的 /v1/audio/transcriptions 端点。需要配置一个支持 Whisper 端点的提供商（如 OpenAI）。请在上方选择具体的提供商以启用转写。",
     "transcriptionInfoDescLocal": "本地 Whisper 转写直接在您的设备上运行 openai-whisper 库。需要同时安装 ffmpeg（用于音频解码）和 openai-whisper Python 包。无需 API Key 或网络连接。安装命令：uv pip install 'copaw[whisper]'。"
+  },
+  "pipeline": {
+    "title": "Pipeline 管理",
+    "description": "创建和管理多智能体 Pipeline",
+    "list": "Pipeline 列表",
+    "create": "创建 Pipeline",
+    "name": "名称",
+    "type": "类型",
+    "agents": "智能体",
+    "status": "状态",
+    "updatedAt": "更新时间",
+    "execute": "执行",
+    "history": "历史记录",
+    "deleteConfirm": "确定删除此 Pipeline？",
+    "namePlaceholder": "输入 Pipeline 名称",
+    "typePlaceholder": "选择 Pipeline 类型",
+    "agentsPlaceholder": "选择智能体",
+    "descriptionPlaceholder": "输入描述",
+    "input": "输入消息",
+    "inputPlaceholder": "输入消息内容",
+    "executionId": "执行 ID",
+    "startedAt": "开始时间",
+    "completedAt": "完成时间",
+    "loadError": "加载 Pipeline 失败",
+    "createSuccess": "Pipeline 创建成功",
+    "createError": "Pipeline 创建失败",
+    "executeSuccess": "Pipeline 执行已启动",
+    "executeError": "Pipeline 执行失败",
+    "deleteSuccess": "Pipeline 删除成功",
+    "deleteError": "Pipeline 删除失败",
+    "historyError": "加载历史记录失败",
+    "type": {
+      "sequential": "顺序执行",
+      "fanout": "并行广播",
+      "conditional": "条件分支",
+      "loop": "循环执行"
+    },
+    "status": {
+      "pending": "待执行",
+      "running": "执行中",
+      "completed": "已完成",
+      "failed": "失败"
+    }
   }
 }
