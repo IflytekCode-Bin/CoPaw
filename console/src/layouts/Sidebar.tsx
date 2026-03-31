@@ -310,6 +310,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           icon: <SparkAgentLine size={16} />,
         },
         {
+          key: "pipeline-management",
+          label: collapsed ? null : t("nav.pipelineManagement", "Pipeline Management"),
+          icon: <SparkOtherLine size={16} />,
+        },
+        {
           key: "models",
           label: collapsed ? null : t("nav.models"),
           icon: <SparkModePlazaLine size={16} />,
