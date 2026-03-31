@@ -4,7 +4,6 @@ import { useAppMessage } from "../../../hooks/useAppMessage";
 import { PlusOutlined, CrownOutlined, ApartmentOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { agentsApi } from "../../../api/modules/agents";
-import { skillApi } from "../../../api/modules/skill";
 import type { AgentSummary } from "../../../api/types/agents";
 import { useAgentStore } from "../../../stores/agentStore";
 import { useAgents } from "./useAgents";
@@ -94,12 +93,6 @@ export default function AgentsPage() {
       const payload = { ...values, workspace_dir };
 
       if (editingAgent) {
-        const newSkills = selectedSkills.filter(
-          (s) => !installedSkillsRef.current.includes(s),
-        );
-        for (const skill of newSkills) {
-          await skillApi.installSkill(editingAgent.id, skill);
-        }
         await agentsApi.updateAgent(editingAgent.id, payload);
         message.success(t("agent.updateSuccess"));
       } else {

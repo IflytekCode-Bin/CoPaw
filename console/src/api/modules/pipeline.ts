@@ -1,4 +1,4 @@
-import { apiClient } from "../client";
+import { request } from "../request";
 
 export interface Pipeline {
   id: string;
@@ -43,42 +43,47 @@ export interface PipelineExecution {
 
 export const pipelineApi = {
   list: async (): Promise<Pipeline[]> => {
-    const response = await apiClient.get("/pipelines/");
-    return response.data;
+    return request<Pipeline[]>("/pipelines/");
   },
 
   get: async (id: string): Promise<Pipeline> => {
-    const response = await apiClient.get(`/pipelines/${id}`);
-    return response.data;
+    return request<Pipeline>(`/pipelines/${id}`);
   },
 
   create: async (data: CreatePipelineRequest): Promise<Pipeline> => {
-    const response = await apiClient.post("/pipelines/", data);
-    return response.data;
+    return request<Pipeline>("/pipelines/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   update: async (
     id: string,
     data: UpdatePipelineRequest
   ): Promise<Pipeline> => {
-    const response = await apiClient.put(`/pipelines/${id}`, data);
-    return response.data;
+    return request<Pipeline>(`/pipelines/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/pipelines/${id}`);
+    return request<void>(`/pipelines/${id}`, {
+      method: "DELETE",
+    });
   },
 
   execute: async (
     id: string,
     data: ExecutePipelineRequest
   ): Promise<PipelineExecution> => {
-    const response = await apiClient.post(`/pipelines/${id}/execute`, data);
-    return response.data;
+    return request<PipelineExecution>(`/pipelines/${id}/execute`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   history: async (id: string): Promise<PipelineExecution[]> => {
-    const response = await apiClient.get(`/pipelines/${id}/history`);
-    return response.data;
+    return request<PipelineExecution[]>(`/pipelines/${id}/history`);
   },
 };
