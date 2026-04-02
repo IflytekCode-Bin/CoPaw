@@ -22,6 +22,7 @@ from .messages import router as messages_router
 from .files import router as files_router
 from .settings import router as settings_router
 from .pipelines import router as pipelines_router
+from .backup import router as backup_router
 
 router = APIRouter()
 
@@ -45,6 +46,7 @@ router.include_router(auth_router)
 router.include_router(files_router)
 router.include_router(settings_router)
 router.include_router(pipelines_router)
+router.include_router(backup_router)
 
 
 def create_agent_scoped_router() -> APIRouter:

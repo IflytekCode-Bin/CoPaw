@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 _DOWNLOAD_TIMEOUT = 90  # seconds
 
-_BIN_DIR = Path(f"{WORKING_DIR}/bin").expanduser()
+_BIN_DIR = Path(str(WORKING_DIR / "bin")).expanduser()
 
 # Pinned cloudflared version — update checksums when bumping.
 _CLOUDFLARED_VERSION = "2026.2.0"

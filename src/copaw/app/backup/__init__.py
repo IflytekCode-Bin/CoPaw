@@ -6,7 +6,7 @@ Architecture:
 - BackupAgent: Agent-level, handles unique resources
 """
 
-from .backup_coordinator import BackupCoordinator
+from .backup_coordinator import BackupCoordinator, get_backup_coordinator, set_backup_coordinator
 from .backup_agent import BackupAgent
 
 # Legacy single-agent backup manager (deprecated, use BackupAgent)
@@ -16,4 +16,6 @@ __all__ = [
     "BackupCoordinator",
     "BackupAgent",
     "BackupManager",  # Deprecated
+    "get_backup_coordinator",
+    "set_backup_coordinator",
 ]
