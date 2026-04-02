@@ -57,6 +57,8 @@ class BackupAgent:
         client: Optional[Minio],
         bucket: str,
         coordinator: Optional["BackupCoordinator"] = None,
+        compress_dialog: bool = True,
+        compress_chats: bool = True,
     ):
         """Initialize backup agent.
 
@@ -66,12 +68,16 @@ class BackupAgent:
             client: MinIO client (shared from coordinator)
             bucket: Agent bucket name (copaw-{agent_id})
             coordinator: BackupCoordinator reference
+            compress_dialog: Compress dialog files (saves space, can't preview)
+            compress_chats: Compress chats.json
         """
         self.agent_id = agent_id
         self.workspace_dir = Path(workspace_dir)
         self.client = client
         self.bucket = bucket
         self.coordinator = coordinator
+        self.compress_dialog = compress_dialog
+        self.compress_chats = compress_chats
 
         self._running = False
         self._last_sync: Dict[str, str] = {}  # path -> checksum
@@ -258,15 +264,23 @@ class BackupAgent:
             clean_pattern = pattern.rstrip("/")
             path = self.workspace_dir / clean_pattern
 
+            # Determine compression based on file type and config
+            if clean_pattern == "dialog":
+                compress = self.compress_dialog
+            elif clean_pattern == "chats.json":
+                compress = self.compress_chats
+            else:
+                compress = True  # Default to compress for other P1 files
+
             if path.is_file():
                 results[str(path)] = await self.sync_file(
-                    path, f"change/{clean_pattern}", compress=True
+                    path, f"change/{clean_pattern}", compress=compress
                 )
             elif path.is_dir():
                 dir_results = await self.sync_directory(
                     path, f"change/{clean_pattern}",
                     exclude_patterns=["*.tmp", "*.lock", "compact_invalid_*"],
-                    compress=True,
+                    compress=compress,
                 )
                 results.update(dir_results)
 

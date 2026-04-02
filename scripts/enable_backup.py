@@ -42,7 +42,9 @@ def enable_backup(port: int = None) -> None:
             'endpoint': 'localhost:9000',
             'secure': False,
             'retention_days': 30,
-            'dedup_enabled': True
+            'dedup_enabled': True,
+            'compress_dialog': False,  # Don't compress for easy preview
+            'compress_chats': False,   # Don't compress for easy preview
         }
     }
     
