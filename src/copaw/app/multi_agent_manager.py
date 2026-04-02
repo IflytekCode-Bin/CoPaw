@@ -541,16 +541,18 @@ class MultiAgentManager:
             base_dir = Path.home() / ".copaw"
 
             # Determine instance_id (host:port) for bucket naming
-            # This prevents bucket collisions across different CoPaw instances
-            last_api = read_last_api()
-            if last_api:
-                host, port = last_api
-                instance_id = f"{host}:{port}"
-            else:
-                # Fallback to hostname + default port
-                import socket
-                hostname = socket.gethostname()
-                instance_id = f"{hostname}:unknown"
+            # Priority: 1. Environment variable, 2. config.json last_api, 3. fallback
+            instance_id = os.getenv("COPAW_INSTANCE_ID")
+            if not instance_id:
+                last_api = read_last_api()
+                if last_api:
+                    host, port = last_api
+                    instance_id = f"{host}:{port}"
+                else:
+                    # Fallback to hostname + default port
+                    import socket
+                    hostname = socket.gethostname()
+                    instance_id = f"{hostname}:unknown"
 
             # Create coordinator
             self._backup_coordinator = BackupCoordinator(

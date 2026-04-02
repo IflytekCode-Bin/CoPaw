@@ -196,6 +196,17 @@ async def lifespan(
     # Start all configured agents (handled by manager)
     await multi_agent_manager.start_all_configured_agents()
 
+    # --- Backup coordinator initialization ---
+    # Initialize backup if enabled in config
+    try:
+        backup_initialized = await multi_agent_manager.init_backup_coordinator()
+        if backup_initialized:
+            logger.info("Backup coordinator initialized successfully")
+            # Start background sync (optional, can be triggered manually)
+            # await multi_agent_manager.start_backup()
+    except Exception as e:
+        logger.warning(f"Backup initialization failed (non-critical): {e}")
+
     # --- Model provider manager (non-reloadable, in-memory) ---
     provider_manager = ProviderManager.get_instance()
 
