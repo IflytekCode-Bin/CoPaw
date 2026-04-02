@@ -1146,6 +1146,10 @@ class BackupConfig(BaseModel):
         default_factory=lambda: ["skills/", "active_skills/"]
     )
 
+    # Compression
+    compress_dialog: bool = True  # Compress dialog/ files (saves space, can't preview in MinIO)
+    compress_chats: bool = True  # Compress chats.json
+
 
 class StorageConfig(BaseModel):
     """Storage configuration for CoPaw."""

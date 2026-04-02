@@ -109,6 +109,8 @@ class BackupCoordinator:
         minio_secure: bool = False,
         base_dir: Optional[Path] = None,
         instance_id: Optional[str] = None,
+        compress_dialog: bool = True,
+        compress_chats: bool = True,
     ):
         """Initialize backup coordinator.
 
@@ -121,6 +123,8 @@ class BackupCoordinator:
             instance_id: CoPaw instance identifier (ip:port format like "192.168.100.103:8085")
                          Used to prefix bucket names to avoid collisions across different CoPaw instances.
                          If None, defaults to "localhost-unknown".
+            compress_dialog: Compress dialog files (default True for space savings)
+            compress_chats: Compress chats.json (default True)
         """
         self.endpoint = minio_endpoint or os.getenv("MINIO_ENDPOINT", "localhost:9000")
         self.access_key = minio_access_key or os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -132,6 +136,10 @@ class BackupCoordinator:
         # Instance ID for bucket naming (prevents collision across CoPaw instances)
         self.instance_id = instance_id or "localhost-unknown"
         self.bucket_prefix = instance_id_to_bucket_prefix(self.instance_id)
+
+        # Compression config
+        self.compress_dialog = compress_dialog
+        self.compress_chats = compress_chats
 
         self.client: Optional[Minio] = None
 
@@ -212,6 +220,8 @@ class BackupCoordinator:
             client=self.client,
             bucket=bucket,
             coordinator=self,
+            compress_dialog=self.compress_dialog,
+            compress_chats=self.compress_chats,
         )
 
         self.agent_managers[agent_id] = agent_manager

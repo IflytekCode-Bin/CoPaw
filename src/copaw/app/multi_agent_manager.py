@@ -533,11 +533,15 @@ class MultiAgentManager:
                 access_key = getattr(backup_config, "access_key", None)
                 secret_key = getattr(backup_config, "secret_key", None)
                 secure = getattr(backup_config, "secure", False)
+                compress_dialog = getattr(backup_config, "compress_dialog", True)
+                compress_chats = getattr(backup_config, "compress_chats", True)
             else:
                 endpoint = None
                 access_key = None
                 secret_key = None
                 secure = False
+                compress_dialog = True
+                compress_chats = True
 
             # Environment variables override (for secrets)
             endpoint = os.getenv("MINIO_ENDPOINT", endpoint or "localhost:9000")
@@ -570,6 +574,8 @@ class MultiAgentManager:
                 minio_secure=secure,
                 base_dir=base_dir,
                 instance_id=instance_id,
+                compress_dialog=compress_dialog,
+                compress_chats=compress_chats,
             )
 
             # Check if MinIO is available
