@@ -43,6 +43,25 @@ DEDUP_RESOURCES = [
 ]
 
 
+def instance_id_to_bucket_prefix(instance_id: str) -> str:
+    """Convert instance_id (ip:port) to bucket-friendly prefix.
+
+    Args:
+        instance_id: Instance identifier like "192.168.100.103:8085"
+
+    Returns:
+        Bucket-friendly prefix like "192-168-100-103-8085"
+
+    MinIO bucket naming rules:
+        - 3-63 characters
+        - Only lowercase letters, numbers, dots, hyphens
+        - No consecutive dots
+        - Cannot start or end with hyphen
+    """
+    # Replace dots and colons with hyphens, ensure lowercase
+    return instance_id.replace(".", "-").replace(":", "-").lower()
+
+
 class BackupCoordinator:
     """Global backup coordinator for multi-agent CoPaw.
 
@@ -60,6 +79,7 @@ class BackupCoordinator:
         minio_secret_key: str = "minioadmin123",
         minio_secure: bool = False,
         base_dir: Optional[Path] = None,
+        instance_id: Optional[str] = None,
     ):
         """Initialize backup coordinator.
 
@@ -69,6 +89,9 @@ class BackupCoordinator:
             minio_secret_key: MinIO secret key
             minio_secure: Use HTTPS
             base_dir: Base directory (~/.copaw or similar)
+            instance_id: CoPaw instance identifier (ip:port format like "192.168.100.103:8085")
+                         Used to prefix bucket names to avoid collisions across different CoPaw instances.
+                         If None, defaults to "localhost-unknown".
         """
         self.endpoint = minio_endpoint or os.getenv("MINIO_ENDPOINT", "localhost:9000")
         self.access_key = minio_access_key or os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -76,11 +99,16 @@ class BackupCoordinator:
         self.secure = minio_secure
 
         self.base_dir = base_dir or Path.home() / ".copaw"
+
+        # Instance ID for bucket naming (prevents collision across CoPaw instances)
+        self.instance_id = instance_id or "localhost-unknown"
+        self.bucket_prefix = instance_id_to_bucket_prefix(self.instance_id)
+
         self.client: Optional[Minio] = None
 
-        # Buckets
-        self.shared_bucket = "copaw-shared"
-        self.backup_bucket = "copaw-backups"
+        # Buckets - prefixed with instance_id
+        self.shared_bucket = f"copaw-{self.bucket_prefix}-shared"
+        self.backup_bucket = f"copaw-{self.bucket_prefix}-backups"
 
         # Agent backup managers
         self.agent_managers: Dict[str, "BackupAgent"] = {}
@@ -139,7 +167,8 @@ class BackupCoordinator:
         from .backup_agent import BackupAgent
 
         # MinIO bucket names must be lowercase
-        bucket = f"copaw-{agent_id.lower()}"
+        # Format: copaw-{instance_prefix}-{agent_id}
+        bucket = f"copaw-{self.bucket_prefix}-{agent_id.lower()}"
 
         # Ensure agent bucket exists
         if self.client and not self.client.bucket_exists(bucket):

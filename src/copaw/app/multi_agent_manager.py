@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Optional, Set, TYPE_CHECKING
 
 from .workspace import Workspace
-from ..config.utils import load_config
+from ..config.utils import load_config, read_last_api
 
 if TYPE_CHECKING:
     from .backup import BackupCoordinator
@@ -540,6 +540,18 @@ class MultiAgentManager:
             # Determine base directory
             base_dir = Path.home() / ".copaw"
 
+            # Determine instance_id (host:port) for bucket naming
+            # This prevents bucket collisions across different CoPaw instances
+            last_api = read_last_api()
+            if last_api:
+                host, port = last_api
+                instance_id = f"{host}:{port}"
+            else:
+                # Fallback to hostname + default port
+                import socket
+                hostname = socket.gethostname()
+                instance_id = f"{hostname}:unknown"
+
             # Create coordinator
             self._backup_coordinator = BackupCoordinator(
                 minio_endpoint=endpoint,
@@ -547,6 +559,7 @@ class MultiAgentManager:
                 minio_secret_key=secret_key,
                 minio_secure=secure,
                 base_dir=base_dir,
+                instance_id=instance_id,
             )
 
             # Check if MinIO is available

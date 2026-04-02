@@ -54,15 +54,19 @@ async def test_backup_coordinator():
     """Test BackupCoordinator."""
     print("\n=== Testing BackupCoordinator ===")
 
+    # Use instance_id to prevent bucket collisions
     coordinator = BackupCoordinator(
         minio_endpoint="localhost:9000",
         minio_access_key="minioadmin",
         minio_secret_key="minioadmin123",
         base_dir=Path.home() / ".copaw",
+        instance_id="192.168.100.103:8085",  # Test instance
     )
 
     assert coordinator.client is not None, "MinIO client should be initialized"
-    print(f"✓ Coordinator initialized: {coordinator.shared_bucket}")
+    print(f"✓ Coordinator initialized: instance_id={coordinator.instance_id}")
+    print(f"  shared_bucket: {coordinator.shared_bucket}")
+    print(f"  bucket_prefix: {coordinator.bucket_prefix}")
 
     # Register agents
     agents = {
@@ -115,6 +119,7 @@ async def test_backup_agent_restore():
         minio_endpoint="localhost:9000",
         minio_access_key="minioadmin",
         minio_secret_key="minioadmin123",
+        instance_id="192.168.100.103:8085",  # Test instance
     )
 
     agent_id = "default"
@@ -162,6 +167,7 @@ async def test_coordinator_restore():
         minio_endpoint="localhost:9000",
         minio_access_key="minioadmin",
         minio_secret_key="minioadmin123",
+        instance_id="192.168.100.103:8085",  # Test instance
     )
 
     # Register agent
