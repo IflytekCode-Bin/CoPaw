@@ -19,6 +19,7 @@ from ...config import (
 from ..channels.registry import BUILTIN_CHANNEL_KEYS
 from ...config.config import (
     AgentsLLMRoutingConfig,
+    BackupConfig,
     ConsoleConfig,
     DingTalkConfig,
     DiscordConfig,
@@ -36,7 +37,7 @@ from ...config.config import (
     WecomConfig,
 )
 
-from .schemas_config import HeartbeatBody
+from .schemas_config import HeartbeatBody, BackupBody
 from ..channels.qrcode_auth_handler import (
     QRCODE_AUTH_HANDLERS,
     generate_qrcode_image,
@@ -639,3 +640,76 @@ async def remove_from_whitelist(
         )
     save_config(config)
     return {"removed": True, "skill_name": skill_name}
+
+
+# ============================================================
+# Backup Configuration
+# ============================================================
+
+
+@router.get(
+    "/backup",
+    summary="Get backup configuration",
+)
+async def get_backup_config(request: Request) -> dict:
+    """Get backup configuration."""
+    from ..agent_context import get_agent_for_request
+
+    agent = await get_agent_for_request(request)
+    agent_config = agent.config
+
+    # Get backup config from StorageConfig
+    storage_cfg = getattr(agent_config, "storage", None)
+    if storage_cfg is None:
+        # Return defaults
+        return {
+            "enabled": False,
+            "endpoint": "localhost:9000",
+            "access_key": "",
+            "secret_key": "",
+            "secure": False,
+            "full_backup_schedule": "0 2 * * *",
+            "incremental_interval": 3600,
+            "retention_days": 30,
+            "dedup_enabled": True,
+            "dedup_resources": ["skills/", "active_skills/"],
+            "compress_dialog": True,
+            "compress_chats": True,
+        }
+
+    backup_cfg = storage_cfg.backup
+    return backup_cfg.model_dump(by_alias=True)
+
+
+@router.put(
+    "/backup",
+    summary="Update backup configuration",
+)
+async def update_backup_config(
+    request: Request,
+    body: BackupBody = Body(..., description="Backup configuration"),
+) -> dict:
+    """Update backup configuration."""
+    from ..agent_context import get_agent_for_request
+
+    agent = await get_agent_for_request(request)
+    agent_config = agent.config
+
+    # Get or create storage config
+    storage_cfg = getattr(agent_config, "storage", None)
+    if storage_cfg is None:
+        from ...config.config import StorageConfig
+        storage_cfg = StorageConfig()
+
+    # Update backup config
+    backup_cfg = storage_cfg.backup
+    body_data = body.model_dump(by_alias=True)
+    for key, value in body_data.items():
+        if hasattr(backup_cfg, key):
+            setattr(backup_cfg, key, value)
+
+    # Save storage config
+    agent_config.storage = storage_cfg
+    save_config(agent_config)
+
+    return backup_cfg.model_dump(by_alias=True)

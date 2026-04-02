@@ -711,3 +711,82 @@ class BackupCoordinator:
                 stats["shared"] = {"error": str(e)}
 
         return stats
+
+    async def get_status(self) -> Dict[str, Any]:
+        """Get backup status for API."""
+        status = {
+            "last_full_backup": None,
+            "last_incremental_backup": None,
+            "total_files": 0,
+            "total_size": 0,
+            "buckets": [],
+        }
+
+        if not self.client:
+            return status
+
+        try:
+            # List all buckets for this instance
+            buckets = list(self.client.list_buckets())
+            status["buckets"] = [b.name for b in buckets if b.name.startswith(self.shared_bucket.rsplit("-", 2)[0])]
+
+            # Count files and size across all buckets
+            total_files = 0
+            total_size = 0
+            for bucket in buckets:
+                if bucket.name.startswith(self.shared_bucket.rsplit("-", 2)[0]):
+                    objects = list(self.client.list_objects(bucket.name))
+                    total_files += len(objects)
+                    total_size += sum(o.size or 0 for o in objects)
+
+            status["total_files"] = total_files
+            status["total_size"] = total_size
+
+            # Get last backup time from backup bucket
+            try:
+                backup_objects = list(self.client.list_objects(self.backup_bucket))
+                if backup_objects:
+                    latest = max(backup_objects, key=lambda o: o.last_modified or datetime.min)
+                    status["last_full_backup"] = latest.last_modified.isoformat() if latest.last_modified else None
+            except Exception:
+                pass
+
+        except Exception as e:
+            logger.error(f"Failed to get status: {e}")
+
+        return status
+
+    async def test_connection(self) -> bool:
+        """Test MinIO connection."""
+        if not self.client:
+            return False
+
+        try:
+            # Try to list buckets
+            self.client.list_buckets()
+            return True
+        except Exception as e:
+            logger.error(f"Connection test failed: {e}")
+            return False
+
+    async def trigger_backup(self, full: bool = True) -> Dict[str, bool]:
+        """Trigger manual backup."""
+        if full:
+            return await self.schedule_full_backup()
+        else:
+            return await self.incremental_backup()
+
+
+# Global coordinator reference
+_backup_coordinator: Optional[BackupCoordinator] = None
+
+
+def set_backup_coordinator(coordinator: BackupCoordinator) -> None:
+    """Set global backup coordinator reference."""
+    global _backup_coordinator
+    _backup_coordinator = coordinator
+
+
+def get_backup_coordinator() -> Optional[BackupCoordinator]:
+    """Get global backup coordinator reference."""
+    return _backup_coordinator

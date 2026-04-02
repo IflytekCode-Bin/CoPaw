@@ -578,6 +578,10 @@ class MultiAgentManager:
                 compress_chats=compress_chats,
             )
 
+            # Set global coordinator reference for API access
+            from .backup.backup_coordinator import set_backup_coordinator
+            set_backup_coordinator(self._backup_coordinator)
+
             # Check if MinIO is available
             if not self._backup_coordinator.client:
                 logger.warning("MinIO not available, backup coordinator disabled")

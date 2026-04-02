@@ -74,11 +74,12 @@ WORKING_DIR = (
     .expanduser()
     .resolve()
 )
+_secret_dir_default = str(WORKING_DIR) + ".secret"
 SECRET_DIR = (
     Path(
         EnvVarLoader.get_str(
             "COPAW_SECRET_DIR",
-            f"{WORKING_DIR}.secret",
+            _secret_dir_default,
         ),
     )
     .expanduser()

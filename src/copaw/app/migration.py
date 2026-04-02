@@ -114,7 +114,7 @@ def _do_migrate_legacy_workspace() -> bool:
     legacy_agents = config.agents
 
     # Create default agent workspace
-    default_workspace = Path(f"{WORKING_DIR}/workspaces/default").expanduser()
+    default_workspace = Path(str(WORKING_DIR / "workspaces" / "default")).expanduser()
     default_workspace.mkdir(parents=True, exist_ok=True)
     logger.info(f"Created default agent workspace: {default_workspace}")
 
@@ -419,7 +419,7 @@ def _do_migrate_legacy_skills() -> bool:
         return False
 
     default_workspace = Path(
-        f"{WORKING_DIR}/workspaces/default",
+        str(WORKING_DIR / "workspaces" / "default"),
     ).expanduser()
     default_workspace.mkdir(parents=True, exist_ok=True)
 
@@ -648,7 +648,7 @@ def _do_ensure_default_agent() -> None:
         agent_existed = True
     else:
         default_workspace = Path(
-            f"{WORKING_DIR}/workspaces/default",
+            str(WORKING_DIR / "workspaces" / "default"),
         ).expanduser()
         agent_existed = False
 
@@ -747,7 +747,7 @@ def _do_ensure_qa_agent() -> None:
         agent_existed = True
     else:
         qa_workspace = Path(
-            f"{WORKING_DIR}/workspaces/{qa_id}",
+            str(WORKING_DIR / "workspaces" / qa_id),
         ).expanduser()
         agent_existed = False
 

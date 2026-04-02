@@ -163,6 +163,12 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
       label: t("nav.heartbeat"),
     },
     {
+      key: "backup",
+      icon: <SparkExitFullscreenLine size={18} />,
+      path: "/backup",
+      label: t("nav.backup"),
+    },
+    {
       key: "workspace",
       icon: <SparkLocalFileLine size={18} />,
       path: "/workspace",
@@ -267,6 +273,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           key: "heartbeat",
           label: collapsed ? null : t("nav.heartbeat"),
           icon: <SparkVoiceChat01Line size={16} />,
+        },
+        {
+          key: "backup",
+          label: collapsed ? null : t("nav.backup"),
+          icon: <SparkExitFullscreenLine size={16} />,
         },
       ],
     },

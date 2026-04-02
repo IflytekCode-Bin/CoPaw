@@ -13,45 +13,24 @@ import styles from "../index.module.less";
 import Chat from "../../pages/Chat";
 
 // All other pages are lazily loaded with automatic retry on chunk failure
-const ChannelsPage = lazyWithRetry(
-  () => import("../../pages/Control/Channels"),
-);
-const SessionsPage = lazyWithRetry(
-  () => import("../../pages/Control/Sessions"),
-);
-const CronJobsPage = lazyWithRetry(
-  () => import("../../pages/Control/CronJobs"),
-);
-const HeartbeatPage = lazyWithRetry(
-  () => import("../../pages/Control/Heartbeat"),
-);
+const ChannelsPage = lazyWithRetry(() => import("../../pages/Control/Channels"));
+const SessionsPage = lazyWithRetry(() => import("../../pages/Control/Sessions"));
+const CronJobsPage = lazyWithRetry(() => import("../../pages/Control/CronJobs"));
+const HeartbeatPage = lazyWithRetry(() => import("../../pages/Control/Heartbeat"));
+const BackupPage = lazyWithRetry(() => import("../../pages/Control/Backup"));
 const AgentConfigPage = lazyWithRetry(() => import("../../pages/Agent/Config"));
 const SkillsPage = lazyWithRetry(() => import("../../pages/Agent/Skills"));
-const SkillPoolPage = lazyWithRetry(
-  () => import("../../pages/Settings/SkillPool"),
-);
+const SkillPoolPage = lazyWithRetry(() => import("../../pages/Settings/SkillPool"));
 const ToolsPage = lazyWithRetry(() => import("../../pages/Agent/Tools"));
-const WorkspacePage = lazyWithRetry(
-  () => import("../../pages/Agent/Workspace"),
-);
+const WorkspacePage = lazyWithRetry(() => import("../../pages/Agent/Workspace"));
 const MCPPage = lazyWithRetry(() => import("../../pages/Agent/MCP"));
 const ModelsPage = lazyWithRetry(() => import("../../pages/Settings/Models"));
-const EnvironmentsPage = lazyWithRetry(
-  () => import("../../pages/Settings/Environments"),
-);
-const SecurityPage = lazyWithRetry(
-  () => import("../../pages/Settings/Security"),
-);
-const TokenUsagePage = lazyWithRetry(
-  () => import("../../pages/Settings/TokenUsage"),
-);
-const VoiceTranscriptionPage = lazyWithRetry(
-  () => import("../../pages/Settings/VoiceTranscription"),
-);
+const EnvironmentsPage = lazyWithRetry(() => import("../../pages/Settings/Environments"));
+const SecurityPage = lazyWithRetry(() => import("../../pages/Settings/Security"));
+const TokenUsagePage = lazyWithRetry(() => import("../../pages/Settings/TokenUsage"));
+const VoiceTranscriptionPage = lazyWithRetry(() => import("../../pages/Settings/VoiceTranscription"));
 const AgentsPage = lazyWithRetry(() => import("../../pages/Settings/Agents"));
-const PipelineManagementPage = lazyWithRetry(
-  () => import("../../pages/Settings/Agents/PipelineManagement"),
-);
+const PipelineManagementPage = lazyWithRetry(() => import("../../pages/Settings/Agents/PipelineManagement"));
 
 const { Content } = Layout;
 
@@ -61,6 +40,7 @@ const pathToKey: Record<string, string> = {
   "/sessions": "sessions",
   "/cron-jobs": "cron-jobs",
   "/heartbeat": "heartbeat",
+  "/backup": "backup",
   "/skills": "skills",
   "/skill-pool": "skill-pool",
   "/tools": "tools",
@@ -106,6 +86,7 @@ export default function MainLayout() {
                   <Route path="/sessions" element={<SessionsPage />} />
                   <Route path="/cron-jobs" element={<CronJobsPage />} />
                   <Route path="/heartbeat" element={<HeartbeatPage />} />
+                  <Route path="/backup" element={<BackupPage />} />
                   <Route path="/skills" element={<SkillsPage />} />
                   <Route path="/skill-pool" element={<SkillPoolPage />} />
                   <Route path="/tools" element={<ToolsPage />} />

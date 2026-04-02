@@ -9,6 +9,8 @@ from .config import (
     SecurityConfig,
     ToolGuardConfig,
     ToolGuardRuleConfig,
+    BackupConfig,
+    StorageConfig,
 )
 from .utils import (
     get_available_channels,
@@ -33,6 +35,8 @@ __all__ = [
     "SecurityConfig",
     "ToolGuardConfig",
     "ToolGuardRuleConfig",
+    "BackupConfig",
+    "StorageConfig",
     "get_available_channels",
     "get_config_path",
     "get_heartbeat_config",
