@@ -14,6 +14,7 @@ import asyncio
 import gzip
 import hashlib
 import logging
+import mimetypes
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
@@ -25,6 +26,25 @@ if TYPE_CHECKING:
     from .backup_coordinator import BackupCoordinator
 
 logger = logging.getLogger(__name__)
+
+
+def get_content_type(file_path: Path) -> str:
+    """Get content type based on file extension."""
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    if content_type:
+        return content_type
+    # Fallback for common types
+    suffix = file_path.suffix.lower()
+    if suffix == ".json":
+        return "application/json"
+    elif suffix == ".md":
+        return "text/markdown"
+    elif suffix == ".txt":
+        return "text/plain"
+    elif suffix == ".gz":
+        return "application/gzip"
+    else:
+        return "application/octet-stream"
 
 
 # Agent-unique resources (each agent has its own)
@@ -132,10 +152,12 @@ class BackupAgent:
             if compress:
                 await self._upload_compressed(local_path, remote_path, checksum)
             else:
+                content_type = get_content_type(local_path)
                 self.client.fput_object(
                     self.bucket,
                     remote_path,
                     str(local_path),
+                    content_type=content_type,
                     metadata={
                         "sha256": checksum,
                         "agent_id": self.agent_id,
@@ -221,6 +243,7 @@ class BackupAgent:
             self.bucket,
             remote_path + ".gz",
             str(temp_path),
+            content_type="application/gzip",
             metadata={"sha256": checksum, "compressed": "true"},
         )
         temp_path.unlink()

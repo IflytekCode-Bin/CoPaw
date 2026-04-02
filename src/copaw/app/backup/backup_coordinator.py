@@ -10,6 +10,7 @@ Manages backup across all agents in a single process:
 import asyncio
 import hashlib
 import logging
+import mimetypes
 import os
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,25 @@ from minio import Minio
 from minio.error import S3Error
 
 logger = logging.getLogger(__name__)
+
+
+def get_content_type(file_path: Path) -> str:
+    """Get content type based on file extension."""
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    if content_type:
+        return content_type
+    # Fallback for common types
+    suffix = file_path.suffix.lower()
+    if suffix == ".json":
+        return "application/json"
+    elif suffix == ".md":
+        return "text/markdown"
+    elif suffix == ".txt":
+        return "text/plain"
+    elif suffix == ".gz":
+        return "application/gzip"
+    else:
+        return "application/octet-stream"
 
 
 # Shared resources (process-level)
@@ -283,6 +303,7 @@ class BackupCoordinator:
                 self.shared_bucket,
                 remote_path,
                 str(local_path),
+                content_type=get_content_type(local_path),
                 metadata={"sha256": checksum},
             )
             logger.debug(f"Uploaded to shared: {local_path.name}")
@@ -386,6 +407,7 @@ class BackupCoordinator:
                     self.shared_bucket,
                     remote_path,
                     str(file_path),
+                    content_type=get_content_type(file_path),
                 )
             except Exception as e:
                 logger.error(f"Upload failed: {file_path} -> {e}")
@@ -418,6 +440,7 @@ class BackupCoordinator:
             bucket,
             f"references/{resource_type}.json",
             str(reference_json),
+            content_type="application/json",
         )
         reference_json.unlink()
 
