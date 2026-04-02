@@ -6,10 +6,15 @@ including lazy loading, lifecycle management, and hot reloading.
 """
 import asyncio
 import logging
-from typing import Dict, Set
+import os
+from pathlib import Path
+from typing import Dict, Optional, Set, TYPE_CHECKING
 
 from .workspace import Workspace
 from ..config.utils import load_config
+
+if TYPE_CHECKING:
+    from .backup import BackupCoordinator
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,7 @@ class MultiAgentManager:
     - Lifecycle management: Start, stop, reload workspaces
     - Thread-safe: Uses async lock for concurrent access
     - Hot reload: Reload individual workspaces without affecting others
+    - Backup coordination: Automatic backup of all agent workspaces
     """
 
     def __init__(self):
@@ -29,6 +35,11 @@ class MultiAgentManager:
         self.agents: Dict[str, Workspace] = {}
         self._lock = asyncio.Lock()
         self._cleanup_tasks: Set[asyncio.Task] = set()
+        
+        # Backup coordinator (initialized on first use or explicitly)
+        self._backup_coordinator: Optional["BackupCoordinator"] = None
+        self._backup_enabled: bool = False
+        
         logger.debug("MultiAgentManager initialized")
 
     async def get_agent(self, agent_id: str) -> Workspace:
@@ -74,6 +85,11 @@ class MultiAgentManager:
                 await instance.start()
                 instance.set_manager(self)  # Set manager reference
                 self.agents[agent_id] = instance
+                
+                # Register for backup if coordinator is initialized
+                if self._backup_coordinator:
+                    await self._register_agent_for_backup(agent_id, instance)
+                
                 logger.info(f"Workspace created and started: {agent_id}")
                 return instance
             except Exception as e:
@@ -193,6 +209,10 @@ class MultiAgentManager:
 
             instance = self.agents[agent_id]
             await instance.stop()
+            
+            # Unregister from backup
+            await self._unregister_agent_from_backup(agent_id)
+            
             del self.agents[agent_id]
             logger.info(f"Agent stopped and removed: {agent_id}")
             return True
@@ -346,6 +366,9 @@ class MultiAgentManager:
         # First, cancel pending cleanup tasks to avoid orphaned instances
         await self.cancel_all_cleanup_tasks()
 
+        # Stop backup coordinator
+        await self.stop_backup()
+
         # Create list of agent IDs to avoid modifying dict during iteration
         agent_ids = list(self.agents.keys())
 
@@ -459,3 +482,205 @@ class MultiAgentManager:
         """String representation of manager."""
         loaded = list(self.agents.keys())
         return f"MultiAgentManager(loaded_agents={loaded})"
+
+    # ============================================================
+    # Backup Coordination
+    # ============================================================
+
+    async def init_backup_coordinator(self) -> bool:
+        """Initialize backup coordinator from configuration.
+
+        Reads backup config from:
+        - config.json storage.backup section
+        - Environment variables (MINIO_ENDPOINT, etc.)
+
+        Returns:
+            bool: True if backup coordinator initialized successfully
+        """
+        if self._backup_coordinator:
+            logger.debug("Backup coordinator already initialized")
+            return True
+
+        try:
+            from .backup import BackupCoordinator
+
+            config = load_config()
+            backup_config = getattr(config, "storage", None)
+            if backup_config:
+                backup_config = getattr(backup_config, "backup", None)
+
+            # Check if backup is enabled
+            if backup_config and hasattr(backup_config, "enabled"):
+                enabled = backup_config.enabled
+            else:
+                enabled = os.getenv("BACKUP_ENABLED", "false").lower() == "true"
+
+            if not enabled:
+                logger.info("Backup disabled in configuration")
+                return False
+
+            # Get MinIO configuration
+            if backup_config:
+                endpoint = getattr(backup_config, "endpoint", None)
+                access_key = getattr(backup_config, "access_key", None)
+                secret_key = getattr(backup_config, "secret_key", None)
+                secure = getattr(backup_config, "secure", False)
+            else:
+                endpoint = None
+                access_key = None
+                secret_key = None
+                secure = False
+
+            # Environment variables override (for secrets)
+            endpoint = os.getenv("MINIO_ENDPOINT", endpoint or "localhost:9000")
+            access_key = os.getenv("MINIO_ACCESS_KEY", access_key or "minioadmin")
+            secret_key = os.getenv("MINIO_SECRET_KEY", secret_key or "minioadmin123")
+            secure = os.getenv("MINIO_SECURE", str(secure)).lower() == "true"
+
+            # Determine base directory
+            base_dir = Path.home() / ".copaw"
+
+            # Create coordinator
+            self._backup_coordinator = BackupCoordinator(
+                minio_endpoint=endpoint,
+                minio_access_key=access_key,
+                minio_secret_key=secret_key,
+                minio_secure=secure,
+                base_dir=base_dir,
+            )
+
+            # Check if MinIO is available
+            if not self._backup_coordinator.client:
+                logger.warning("MinIO not available, backup coordinator disabled")
+                self._backup_coordinator = None
+                return False
+
+            self._backup_enabled = True
+            logger.info(f"Backup coordinator initialized: endpoint={endpoint}")
+
+            # Register all loaded agents
+            for agent_id, workspace in self.agents.items():
+                await self._register_agent_for_backup(agent_id, workspace)
+
+            return True
+
+        except ImportError as e:
+            logger.warning(f"Backup module not available: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to initialize backup coordinator: {e}")
+            return False
+
+    async def _register_agent_for_backup(
+        self,
+        agent_id: str,
+        workspace: Workspace,
+    ) -> bool:
+        """Register an agent with backup coordinator.
+
+        Args:
+            agent_id: Agent ID
+            workspace: Workspace instance
+
+        Returns:
+            bool: Success status
+        """
+        if not self._backup_coordinator:
+            return False
+
+        try:
+            await self._backup_coordinator.register_agent(
+                agent_id,
+                Path(workspace.workspace_dir),
+            )
+            logger.debug(f"Registered agent for backup: {agent_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to register agent for backup: {e}")
+            return False
+
+    async def _unregister_agent_from_backup(self, agent_id: str) -> None:
+        """Unregister an agent from backup coordinator.
+
+        Args:
+            agent_id: Agent ID
+        """
+        if self._backup_coordinator:
+            await self._backup_coordinator.unregister_agent(agent_id)
+            logger.debug(f"Unregistered agent from backup: {agent_id}")
+
+    async def start_backup(self) -> bool:
+        """Start backup coordinator background sync.
+
+        Returns:
+            bool: Success status
+        """
+        if not self._backup_coordinator:
+            # Try to initialize if not already
+            if not await self.init_backup_coordinator():
+                return False
+
+        await self._backup_coordinator.start()
+        logger.info("Backup coordinator started")
+        return True
+
+    async def stop_backup(self) -> None:
+        """Stop backup coordinator."""
+        if self._backup_coordinator:
+            await self._backup_coordinator.stop()
+            logger.info("Backup coordinator stopped")
+
+    async def trigger_backup(self, full: bool = False) -> Dict[str, bool]:
+        """Trigger backup for all agents.
+
+        Args:
+            full: Full backup vs incremental
+
+        Returns:
+            Dict of agent IDs and success status
+        """
+        if not self._backup_coordinator:
+            logger.warning("Backup coordinator not initialized")
+            return {}
+
+        try:
+            if full:
+                result = await self._backup_coordinator.schedule_full_backup()
+            else:
+                result = await self._backup_coordinator.incremental_backup()
+
+            # Convert to simple status dict
+            status = {}
+            for agent_id, agent_result in result.get("agents", {}).items():
+                if isinstance(agent_result, dict):
+                    stats = agent_result.get("stats", {})
+                    status[agent_id] = stats.get("success", 0) > 0
+                else:
+                    status[agent_id] = False
+
+            return status
+
+        except Exception as e:
+            logger.error(f"Backup failed: {e}")
+            return {}
+
+    async def get_backup_stats(self) -> Optional[Dict]:
+        """Get backup statistics.
+
+        Returns:
+            Dict with backup stats or None if not initialized
+        """
+        if not self._backup_coordinator:
+            return None
+
+        return await self._backup_coordinator.get_stats()
+
+    @property
+    def backup_enabled(self) -> bool:
+        """Check if backup is enabled."""
+        return self._backup_enabled
+
+    @property
+    def backup_coordinator(self) -> Optional["BackupCoordinator"]:
+        """Get backup coordinator instance."""
+        return self._backup_coordinator
