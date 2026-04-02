@@ -86,3 +86,4 @@ export default api;
 
 // Export individual APIs for direct access
 export { agentsApi };
+export { backupApi };

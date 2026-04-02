@@ -1,29 +1,30 @@
-import { request } from "../config";
+import { request } from "../request";
 import type { BackupConfig, BackupStatus, BackupResult } from "../types/backup";
 
 export const backupApi = {
   /** Get backup configuration */
-  getConfig: async (): Promise<BackupConfig> => {
-    return request.get("/api/backup/config");
-  },
+  getBackupConfig: () => request<BackupConfig>("/config/backup"),
 
   /** Update backup configuration */
-  updateConfig: async (config: Partial<BackupConfig>): Promise<void> => {
-    return request.put("/api/backup/config", config);
-  },
+  updateBackupConfig: (body: Partial<BackupConfig>) =>
+    request<void>("/config/backup", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
 
   /** Get backup status */
-  getStatus: async (): Promise<BackupStatus> => {
-    return request.get("/api/backup/status");
-  },
+  getBackupStatus: () => request<BackupStatus>("/backup/status"),
 
   /** Trigger manual backup */
-  triggerBackup: async (full: boolean = true): Promise<BackupResult> => {
-    return request.post("/api/backup/trigger", { full });
-  },
+  triggerBackup: (full: boolean = true) =>
+    request<BackupResult>("/backup/trigger", {
+      method: "POST",
+      body: JSON.stringify({ full }),
+    }),
 
   /** Test MinIO connection */
-  testConnection: async (): Promise<{ success: boolean; message: string }> => {
-    return request.post("/api/backup/test-connection");
-  },
+  testConnection: () =>
+    request<{ success: boolean; message: string }>("/backup/test-connection", {
+      method: "POST",
+    }),
 };
