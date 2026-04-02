@@ -62,6 +62,35 @@ def instance_id_to_bucket_prefix(instance_id: str) -> str:
     return instance_id.replace(".", "-").replace(":", "-").lower()
 
 
+def agent_id_to_bucket_suffix(agent_id: str) -> str:
+    """Convert agent_id to bucket-friendly suffix.
+
+    Args:
+        agent_id: Agent identifier like "default" or "CoPaw_QA_Agent_0.1beta1"
+
+    Returns:
+        Bucket-friendly suffix like "default" or "copaw-qa-agent-0-1beta1"
+
+    MinIO bucket naming rules:
+        - 3-63 characters
+        - Only lowercase letters, numbers, dots, hyphens
+        - No underscores allowed
+        - No consecutive dots
+        - Cannot start or end with hyphen
+    """
+    # Replace underscores and dots with hyphens, ensure lowercase
+    result = agent_id.replace("_", "-").replace(".", "-").lower()
+    
+    # Remove consecutive hyphens
+    while "--" in result:
+        result = result.replace("--", "-")
+    
+    # Remove leading/trailing hyphens
+    result = result.strip("-")
+    
+    return result
+
+
 class BackupCoordinator:
     """Global backup coordinator for multi-agent CoPaw.
 
@@ -166,9 +195,11 @@ class BackupCoordinator:
         """
         from .backup_agent import BackupAgent
 
-        # MinIO bucket names must be lowercase
-        # Format: copaw-{instance_prefix}-{agent_id}
-        bucket = f"copaw-{self.bucket_prefix}-{agent_id.lower()}"
+        # MinIO bucket names must be lowercase and valid
+        # Format: copaw-{instance_prefix}-{agent_id_suffix}
+        # Use agent_id_to_bucket_suffix to handle special characters
+        agent_suffix = agent_id_to_bucket_suffix(agent_id)
+        bucket = f"copaw-{self.bucket_prefix}-{agent_suffix}"
 
         # Ensure agent bucket exists
         if self.client and not self.client.bucket_exists(bucket):

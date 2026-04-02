@@ -202,8 +202,8 @@ async def lifespan(
         backup_initialized = await multi_agent_manager.init_backup_coordinator()
         if backup_initialized:
             logger.info("Backup coordinator initialized successfully")
-            # Start background sync (optional, can be triggered manually)
-            # await multi_agent_manager.start_backup()
+            # Trigger initial sync (upload existing files)
+            await multi_agent_manager.trigger_backup(full=True)
     except Exception as e:
         logger.warning(f"Backup initialization failed (non-critical): {e}")
 
