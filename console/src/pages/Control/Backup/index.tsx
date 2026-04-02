@@ -125,20 +125,11 @@ function BackupPage() {
     return new Date(isoString).toLocaleString();
   };
 
-  const parseCron = (cron: string) => {
-    // Simple cron parser: "0 2 * * *" -> "Daily at 2:00 AM"
-    const parts = cron.split(" ");
-    if (parts.length !== 5) return cron;
-    const [minute, hour, day, month, dow] = parts;
-    if (day === "*" && month === "*" && dow === "*") {
-      return t("backup.dailyAt", { hour, minute });
-    }
-    return cron;
-  };
-
   return (
     <div className={styles.container}>
-      <PageHeader title={t("backup.title")} subtitle={t("backup.subtitle")} />
+      <PageHeader
+        items={[{ title: t("nav.control") }, { title: t("backup.title") }]}
+      />
 
       <Spin spinning={loading}>
         {/* Status Card */}
