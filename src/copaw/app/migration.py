@@ -99,7 +99,7 @@ def migrate_legacy_workspace_to_default_agent() -> bool:
     legacy_agents = config.agents
 
     # Create default agent workspace
-    default_workspace = Path(f"{WORKING_DIR}/workspaces/default").expanduser()
+    default_workspace = Path(str(WORKING_DIR / "workspaces" / "default")).expanduser()
     default_workspace.mkdir(parents=True, exist_ok=True)
     logger.info(f"Created default agent workspace: {default_workspace}")
 
@@ -367,7 +367,7 @@ def migrate_legacy_skills_to_skill_pool() -> bool:
         return False
 
     default_workspace = Path(
-        f"{WORKING_DIR}/workspaces/default",
+        str(WORKING_DIR / "workspaces" / "default"),
     ).expanduser()
     default_workspace.mkdir(parents=True, exist_ok=True)
 
@@ -578,7 +578,7 @@ def ensure_default_agent_exists() -> None:
         agent_existed = True
     else:
         default_workspace = Path(
-            f"{WORKING_DIR}/workspaces/default",
+            str(WORKING_DIR / "workspaces" / "default"),
         ).expanduser()
         agent_existed = False
 
@@ -661,7 +661,7 @@ def ensure_qa_agent_exists() -> None:
         agent_existed = True
     else:
         qa_workspace = Path(
-            f"{WORKING_DIR}/workspaces/{qa_id}",
+            str(WORKING_DIR / "workspaces" / qa_id),
         ).expanduser()
         agent_existed = False
 

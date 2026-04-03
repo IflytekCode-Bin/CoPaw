@@ -44,6 +44,8 @@ def _normalize_working_dir_bound_paths(data: object) -> object:
     "/Users/x/.copaw/workspaces/...".
     Only rewrites known working-dir-bound keys.
     """
+    import re
+    
     legacy_root_tilde = "~/.copaw"
     legacy_root_abs = str(Path(legacy_root_tilde).expanduser().resolve())
     new_root_abs = str(WORKING_DIR)
@@ -51,10 +53,22 @@ def _normalize_working_dir_bound_paths(data: object) -> object:
     def _rewrite_path_value(v: object) -> object:
         if not isinstance(v, str) or not v:
             return v
+        
+        # 先修复重复追加的路径（如 .copaw_dev_dev_dev）
+        v = re.sub(r'\.copaw_(dev|test|ops|worker)(_\1)+', r'.copaw_\1', v)
+        
+        # 如果路径已经指向正确的 WORKING_DIR，保持不变
+        if v.startswith(new_root_abs + "/") or v == new_root_abs:
+            return v
+        
+        # 然后处理 legacy 路径替换
         if v.startswith(legacy_root_tilde):
             return new_root_abs + v[len(legacy_root_tilde) :]
-        if v.startswith(legacy_root_abs):
+        if v.startswith(legacy_root_abs + "/"):
             return new_root_abs + v[len(legacy_root_abs) :]
+        if v == legacy_root_abs:
+            return new_root_abs
+            
         return v
 
     def _walk(obj: object, key: str | None = None) -> object:
@@ -530,9 +544,14 @@ def save_config(config: Config, config_path: Optional[Path] = None) -> None:
     if config_path is None:
         config_path = get_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # 应用路径修复
+    data = config.model_dump(mode="json", by_alias=True)
+    data = _normalize_working_dir_bound_paths(data)
+    
     with open(config_path, "w", encoding="utf-8") as file:
         json.dump(
-            config.model_dump(mode="json", by_alias=True),
+            data,
             file,
             indent=2,
             ensure_ascii=False,
