@@ -21,9 +21,20 @@ export interface BackupStatus {
   buckets: string[];
 }
 
+export interface AgentBackupResult {
+  agent_id: string;
+  bucket: string;
+  files_synced: string[];
+  files_failed: string[];
+  total: number;
+  success: number;
+}
+
 export interface BackupResult {
   success: boolean;
   message: string;
   files_backed_up: number;
   duration_ms: number;
+  agents: AgentBackupResult[];
+  shared_files: string[];
 }

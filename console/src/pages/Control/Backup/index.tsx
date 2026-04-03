@@ -13,14 +13,19 @@ import {
   Descriptions,
   Alert,
   Divider,
+  Modal,
+  Typography,
+  Collapse,
 } from "antd";
-import { ClockCircleOutlined, CloudOutlined, SyncOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { ClockCircleOutlined, CloudOutlined, SyncOutlined, CheckCircleOutlined, ExclamationCircleOutlined, FileOutlined, FolderOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import api from "../../../api";
 import { useAgentStore } from "../../../stores/agentStore";
 import type { BackupConfig, BackupStatus, BackupResult } from "../../../api/types/backup";
 import { PageHeader } from "@/components/PageHeader";
 import styles from "./index.module.less";
+
+const { Text } = Typography;
 
 function BackupPage() {
   const { t } = useTranslation();
@@ -32,6 +37,8 @@ function BackupPage() {
   const [form] = Form.useForm<BackupConfig>();
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [connectionTest, setConnectionTest] = useState<{ success: boolean; message: string } | null>(null);
+  const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
+  const [resultModalOpen, setResultModalOpen] = useState(false);
 
   const fetchConfig = async () => {
     setLoading(true);
@@ -98,11 +105,10 @@ function BackupPage() {
     setBackingUp(true);
     try {
       const result: BackupResult = await api.triggerBackup(full);
+      setBackupResult(result);
+      setResultModalOpen(true);
       if (result.success) {
-        message.success(t("backup.backupSuccess", { count: result.files_backed_up }));
         fetchStatus();
-      } else {
-        message.error(result.message);
       }
     } catch (e) {
       console.error("Backup failed:", e);
@@ -125,11 +131,114 @@ function BackupPage() {
     return new Date(isoString).toLocaleString();
   };
 
+  const renderBackupResultModal = () => (
+    <Modal
+      title={
+        <Space>
+          {backupResult?.success ? (
+            <CheckCircleOutlined style={{ color: "#52c41a" }} />
+          ) : (
+            <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+          )}
+          {backupResult?.message}
+        </Space>
+      }
+      open={resultModalOpen}
+      onCancel={() => setResultModalOpen(false)}
+      footer={[
+        <Button key="close" onClick={() => setResultModalOpen(false)}>
+          关闭
+        </Button>,
+      ]}
+      width={700}
+    >
+      {backupResult && (
+        <div>
+          <Descriptions column={3} size="small" style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="备份文件数">
+              <Text strong>{backupResult.files_backed_up}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="耗时">
+              <Text>{backupResult.duration_ms} ms</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={backupResult.success ? "success" : "error"}>
+                {backupResult.success ? "成功" : "失败"}
+              </Tag>
+            </Descriptions.Item>
+          </Descriptions>
+
+          {/* Shared Files */}
+          {backupResult.shared_files.length > 0 && (
+            <Card size="small" title={<Space><FolderOutlined /> 共享文件</Space>} style={{ marginBottom: 12 }}>
+              <div style={{ maxHeight: 100, overflow: "auto" }}>
+                {backupResult.shared_files.map((file, idx) => (
+                  <Tag key={idx} icon={<FileOutlined />} style={{ margin: "2px" }}>
+                    {file}
+                  </Tag>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Agent Files */}
+          {backupResult.agents.length > 0 && (
+            <Collapse
+              size="small"
+              defaultActiveKey={backupResult.agents.map(a => a.agent_id)}
+              items={backupResult.agents.map((agent) => ({
+                key: agent.agent_id,
+                label: (
+                  <Space>
+                    <FolderOutlined />
+                    <Text strong>{agent.agent_id}</Text>
+                    <Tag color="blue">{agent.bucket}</Tag>
+                    <Text type="secondary">({agent.success}/{agent.total} 文件)</Text>
+                  </Space>
+                ),
+                children: (
+                  <div>
+                    {agent.files_synced.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <Text type="success" strong>已同步 ({agent.files_synced.length})</Text>
+                        <div style={{ maxHeight: 150, overflow: "auto", marginTop: 4 }}>
+                          {agent.files_synced.map((file, idx) => (
+                            <Tag key={idx} color="success" icon={<FileOutlined />} style={{ margin: "2px" }}>
+                              {file}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {agent.files_failed.length > 0 && (
+                      <div>
+                        <Text type="danger" strong>失败 ({agent.files_failed.length})</Text>
+                        <div style={{ maxHeight: 100, overflow: "auto", marginTop: 4 }}>
+                          {agent.files_failed.map((file, idx) => (
+                            <Tag key={idx} color="error" icon={<FileOutlined />} style={{ margin: "2px" }}>
+                              {file}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ),
+              }))}
+            />
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+
   return (
     <div className={styles.container}>
       <PageHeader
         items={[{ title: t("nav.control") }, { title: t("backup.title") }]}
       />
+
+      {renderBackupResultModal()}
 
       <Spin spinning={loading}>
         {/* Status Card */}
