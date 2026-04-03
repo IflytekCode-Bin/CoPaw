@@ -697,6 +697,44 @@ class MultiAgentManager:
             logger.error(f"Backup failed: {e}")
             return {}
 
+    async def start_scheduled_backup(self) -> bool:
+        """Start scheduled backup tasks.
+
+        Reads schedule from config and starts background backup loop.
+
+        Returns:
+            True if started successfully
+        """
+        if not self._backup_coordinator:
+            logger.warning("Backup coordinator not initialized")
+            return False
+
+        try:
+            config = load_config()
+            storage_cfg = getattr(config, "storage", None)
+            if not storage_cfg:
+                # Use defaults
+                full_backup_cron = "0 2 * * *"
+                incremental_interval = 3600
+            else:
+                backup_cfg = storage_cfg.backup
+                full_backup_cron = backup_cfg.full_backup_schedule
+                incremental_interval = backup_cfg.incremental_interval
+
+            await self._backup_coordinator.start_scheduled_backup(
+                full_backup_cron=full_backup_cron,
+                incremental_interval=incremental_interval,
+            )
+            logger.info(
+                f"Scheduled backup started: full={full_backup_cron}, "
+                f"incremental={incremental_interval}s"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to start scheduled backup: {e}")
+            return False
+
     async def get_backup_stats(self) -> Optional[Dict]:
         """Get backup statistics.
 
