@@ -32,6 +32,7 @@ from ...config.config import (
     QQConfig,
     SkillScannerConfig,
     SkillScannerWhitelistEntry,
+    StorageConfig,
     TelegramConfig,
     VoiceChannelConfig,
     WecomConfig,
@@ -690,15 +691,12 @@ async def update_backup_config(
     body: BackupBody = Body(..., description="Backup configuration"),
 ) -> dict:
     """Update backup configuration."""
-    from ..agent_context import get_agent_for_request
-
-    agent = await get_agent_for_request(request)
-    agent_config = agent.config
+    # Load root config (storage is at root level, not agent level)
+    config = load_config()
 
     # Get or create storage config
-    storage_cfg = getattr(agent_config, "storage", None)
+    storage_cfg = getattr(config, "storage", None)
     if storage_cfg is None:
-        from ...config.config import StorageConfig
         storage_cfg = StorageConfig()
 
     # Update backup config
@@ -709,7 +707,7 @@ async def update_backup_config(
             setattr(backup_cfg, key, value)
 
     # Save storage config
-    agent_config.storage = storage_cfg
-    save_config(agent_config)
+    config.storage = storage_cfg
+    save_config(config)
 
     return backup_cfg.model_dump(by_alias=True)
