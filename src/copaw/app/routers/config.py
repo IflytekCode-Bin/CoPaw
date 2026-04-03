@@ -713,13 +713,11 @@ async def remove_from_whitelist(
 )
 async def get_backup_config(request: Request) -> dict:
     """Get backup configuration."""
-    from ..agent_context import get_agent_for_request
-
-    agent = await get_agent_for_request(request)
-    agent_config = agent.config
+    # Load root config (storage is at root level, not agent level)
+    config = load_config()
 
     # Get backup config from StorageConfig
-    storage_cfg = getattr(agent_config, "storage", None)
+    storage_cfg = getattr(config, "storage", None)
     if storage_cfg is None:
         # Return defaults
         return {
