@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { Card, Button, Form, Space } from "antd";
+import { Card, Button, Form, Space, Popconfirm } from "antd";
 import { useAppMessage } from "../../../hooks/useAppMessage";
-import { PlusOutlined, CrownOutlined, ApartmentOutlined } from "@ant-design/icons";
+import { PlusOutlined, CrownOutlined, ApartmentOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { agentsApi } from "../../../api/modules/agents";
 import type { AgentSummary } from "../../../api/types/agents";
@@ -154,6 +154,20 @@ export default function AgentsPage() {
     setOrchestrationModalVisible(true);
   };
 
+  const handleRemoveLeader = async () => {
+    if (!leaderAgent) return;
+    try {
+      await agentsApi.setLeaderAgent(null);
+      await loadAgents();
+      message.success(t("agent.leaderRemoved", "Leader agent removed"));
+    } catch (error: any) {
+      console.error("Failed to remove leader agent:", error);
+      message.error(
+        error.message || t("agent.removeLeaderFailed", "Failed to remove leader agent")
+      );
+    }
+  };
+
   return (
     <div className={styles.agentsPage}>
       <PageHeader
@@ -175,6 +189,25 @@ export default function AgentsPage() {
             >
               {t("agent.orchestration", "Orchestration")}
             </Button>
+            {leaderAgent && (
+              <Popconfirm
+                title={t("agent.removeLeaderConfirm", "Remove leader agent?")}
+                description={t(
+                  "agent.removeLeaderDesc",
+                  "This will clear the current leader. Make sure no pipelines are using it."
+                )}
+                onConfirm={handleRemoveLeader}
+                okText={t("common.confirm", "Confirm")}
+                cancelText={t("common.cancel", "Cancel")}
+              >
+                <Button
+                  icon={<CloseCircleOutlined />}
+                  danger
+                >
+                  {t("agent.removeLeader", "Remove Leader")}
+                </Button>
+              </Popconfirm>
+            )}
             <Button
               type="primary"
               icon={<PlusOutlined />}
