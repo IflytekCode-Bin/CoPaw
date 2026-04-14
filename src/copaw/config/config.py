@@ -688,7 +688,7 @@ class AgentsConfig(BaseModel):
         default_factory=lambda: {
             "default": AgentProfileRef(
                 id="default",
-                workspace_dir=f"{WORKING_DIR}/workspaces/default",
+                workspace_dir=str(WORKING_DIR / "workspaces" / "default"),
             ),
         },
         description="Agent profile references (ID and workspace path only)",
@@ -1062,6 +1062,43 @@ class SecurityConfig(BaseModel):
     )
 
 
+class BackupConfig(BaseModel):
+    """Backup configuration for enterprise storage.
+
+    All sensitive fields (access_key, secret_key) should use
+    environment variables for security.
+    """
+
+    enabled: bool = False
+    endpoint: str = "localhost:9000"
+    access_key: str = ""  # Use MINIO_ACCESS_KEY env var
+    secret_key: str = ""  # Use MINIO_SECRET_KEY env var
+    secure: bool = False
+
+    # Backup schedule (cron format)
+    full_backup_schedule: str = "0 2 * * *"  # Daily at 2am
+    incremental_interval: int = 3600  # Every hour
+
+    # Retention
+    retention_days: int = 30
+
+    # Deduplication
+    dedup_enabled: bool = True
+    dedup_resources: List[str] = Field(
+        default_factory=lambda: ["skills/", "active_skills/"]
+    )
+
+    # Compression
+    compress_dialog: bool = True  # Compress dialog/ files (saves space, can't preview in MinIO)
+    compress_chats: bool = True  # Compress chats.json
+
+
+class StorageConfig(BaseModel):
+    """Storage configuration for CoPaw."""
+
+    backup: BackupConfig = Field(default_factory=BackupConfig)
+
+
 class Config(BaseModel):
     """Root config (config.json)."""
 
@@ -1072,6 +1109,7 @@ class Config(BaseModel):
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     last_dispatch: Optional[LastDispatchConfig] = None
     security: SecurityConfig = Field(default_factory=SecurityConfig)
+    storage: StorageConfig = Field(default_factory=StorageConfig)
     show_tool_details: bool = True
     user_timezone: str = Field(
         default_factory=detect_system_timezone,
@@ -1251,7 +1289,7 @@ def migrate_legacy_config_to_multi_agent() -> bool:
     legacy_agents = config.agents
 
     # Create default agent workspace
-    default_workspace = Path(f"{WORKING_DIR}/workspaces/default").expanduser()
+    default_workspace = Path(str(WORKING_DIR / "workspaces" / "default")).expanduser()
     default_workspace.mkdir(parents=True, exist_ok=True)
 
     # Create default agent configuration from legacy settings
