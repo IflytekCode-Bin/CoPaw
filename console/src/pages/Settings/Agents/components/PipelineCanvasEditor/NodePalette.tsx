@@ -14,7 +14,7 @@ import {
   ApartmentOutlined,
 } from '@ant-design/icons';
 import type { CanvasNodeType } from '../types';
-import styles from '../index.module.less';
+import styles from './index.module.less';
 
 interface NodePaletteProps {
   onDragStart: (event: React.DragEvent, nodeType: CanvasNodeType) => void;

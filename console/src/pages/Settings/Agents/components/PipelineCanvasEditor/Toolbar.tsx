@@ -11,7 +11,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import styles from '../index.module.less';
+import styles from './index.module.less';
 
 interface ToolbarProps {
   onSave: () => void;
