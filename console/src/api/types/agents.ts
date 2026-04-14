@@ -6,10 +6,12 @@ export interface AgentSummary {
   description: string;
   workspace_dir: string;
   enabled: boolean;
+  is_leader?: boolean;
 }
 
 export interface AgentListResponse {
   agents: AgentSummary[];
+  leader_agent?: string;
 }
 
 export interface ReorderAgentsResponse {

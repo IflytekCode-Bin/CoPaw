@@ -75,4 +75,23 @@ export const agentsApi = {
   // Agent memory files
   listAgentMemory: (agentId: string) =>
     request<MdFileInfo[]>(`/agents/${agentId}/memory`),
+
+  // Leader agent
+  setLeaderAgent: (leaderId: string | null) =>
+    request<{ success: boolean; leader_agent: string | null }>("/agents/leader", {
+      method: "PUT",
+      body: JSON.stringify({ leader_agent: leaderId }),
+    }),
+
+  // Per-agent leader operations
+  setLeader: (agentId: string) =>
+    request<{ success: boolean; agent_id: string; is_leader: boolean }>(
+      `/agents/${agentId}/set-leader`,
+      { method: "POST" },
+    ),
+  removeLeader: (agentId: string) =>
+    request<{ success: boolean; agent_id: string; is_leader: boolean; was_leader: boolean }>(
+      `/agents/${agentId}/remove-leader`,
+      { method: "POST" },
+    ),
 };

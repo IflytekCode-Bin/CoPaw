@@ -1,29 +1,23 @@
 """Pipeline management API routes."""
 
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
+import logging
+from typing import Any, List, Optional
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from datetime import datetime
 
-from copaw.pipeline import (
-    SequentialPipeline,
-    FanoutPipeline,
-    ConditionalPipeline,
-    LoopPipeline,
-)
-from copaw.pipeline.state_manager import StateManager
+# Absolute imports
+from copaw.app.pipeline_manager import get_pipeline_manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
-
-# In-memory storage for demo (replace with database in production)
-_pipelines_db = {}
-_executions_db = {}
 
 
 class PipelineConfig(BaseModel):
     """Pipeline configuration."""
 
     leader_agent: Optional[str] = None
+    owner_agent_id: Optional[str] = None
     max_retries: int = 3
     timeout: Optional[int] = None
 
@@ -36,14 +30,20 @@ class CreatePipelineRequest(BaseModel):
     agents: List[str] = Field(..., description="List of agent IDs")
     description: Optional[str] = Field(None, description="Pipeline description")
     config: Optional[PipelineConfig] = Field(None, description="Pipeline configuration")
+    owner_agent_id: Optional[str] = Field(None, description="Owner agent ID")
+    sub_pipelines: List[str] = Field(default_factory=list, description="Sub-pipeline IDs")
+    parent_pipeline_id: Optional[str] = Field(None, description="Parent pipeline ID for nesting")
 
 
 class UpdatePipelineRequest(BaseModel):
     """Request to update a pipeline."""
 
     name: Optional[str] = None
+    type: Optional[str] = None
+    agents: Optional[List[str]] = None
     description: Optional[str] = None
     config: Optional[PipelineConfig] = None
+    sub_pipelines: Optional[List[str]] = None
 
 
 class PipelineResponse(BaseModel):
@@ -56,6 +56,9 @@ class PipelineResponse(BaseModel):
     description: Optional[str] = None
     config: Optional[dict] = None
     status: str = "pending"
+    owner_agent_id: Optional[str] = None
+    sub_pipelines: List[str] = []
+    parent_pipeline_id: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -80,120 +83,190 @@ class PipelineExecutionResponse(BaseModel):
 
 
 @router.get("/", response_model=List[PipelineResponse])
-async def list_pipelines():
-    """List all pipelines."""
-    return list(_pipelines_db.values())
+async def list_pipelines(
+    owner_agent_id: Optional[str] = Query(None, description="Filter by owner agent ID"),
+    parent_pipeline_id: Optional[str] = Query(None, description="Filter by parent pipeline ID"),
+):
+    """List all pipelines, optionally filtered."""
+    manager = get_pipeline_manager()
+    pipelines = manager.list_all(
+        owner_agent_id=owner_agent_id,
+        parent_pipeline_id=parent_pipeline_id,
+    )
+    return pipelines
 
 
 @router.post("/", response_model=PipelineResponse)
 async def create_pipeline(request: CreatePipelineRequest):
     """Create a new pipeline."""
-    pipeline_id = f"pipeline_{len(_pipelines_db) + 1}"
-    now = datetime.utcnow().isoformat()
+    manager = get_pipeline_manager()
+    config_dict = {}
+    if request.config:
+        config_dict = request.config.model_dump()
 
-    pipeline_data = {
-        "id": pipeline_id,
-        "name": request.name,
-        "type": request.type,
-        "agents": request.agents,
-        "description": request.description,
-        "config": request.config.dict() if request.config else None,
-        "status": "pending",
-        "created_at": now,
-        "updated_at": now,
-    }
-
-    _pipelines_db[pipeline_id] = pipeline_data
-    return pipeline_data
+    pipeline = manager.create(
+        name=request.name,
+        pipeline_type=request.type,
+        agents=request.agents,
+        description=request.description,
+        config=config_dict,
+        owner_agent_id=request.owner_agent_id,
+        sub_pipelines=request.sub_pipelines,
+        parent_pipeline_id=request.parent_pipeline_id,
+    )
+    return pipeline
 
 
 @router.get("/{pipeline_id}", response_model=PipelineResponse)
 async def get_pipeline(pipeline_id: str):
     """Get pipeline by ID."""
-    if pipeline_id not in _pipelines_db:
+    manager = get_pipeline_manager()
+    pipeline = manager.get(pipeline_id)
+    if pipeline is None:
         raise HTTPException(status_code=404, detail="Pipeline not found")
-    return _pipelines_db[pipeline_id]
+    return pipeline
 
 
 @router.put("/{pipeline_id}", response_model=PipelineResponse)
 async def update_pipeline(pipeline_id: str, request: UpdatePipelineRequest):
     """Update a pipeline."""
-    if pipeline_id not in _pipelines_db:
+    manager = get_pipeline_manager()
+    config_dict = None
+    if request.config:
+        config_dict = request.config.model_dump()
+
+    pipeline = manager.update(
+        pipeline_id=pipeline_id,
+        name=request.name,
+        pipeline_type=request.type,
+        agents=request.agents,
+        description=request.description,
+        config=config_dict,
+        sub_pipelines=request.sub_pipelines,
+    )
+    if pipeline is None:
         raise HTTPException(status_code=404, detail="Pipeline not found")
-
-    pipeline = _pipelines_db[pipeline_id]
-
-    if request.name is not None:
-        pipeline["name"] = request.name
-    if request.description is not None:
-        pipeline["description"] = request.description
-    if request.config is not None:
-        pipeline["config"] = request.config.dict()
-
-    pipeline["updated_at"] = datetime.utcnow().isoformat()
-
     return pipeline
 
 
 @router.delete("/{pipeline_id}")
 async def delete_pipeline(pipeline_id: str):
     """Delete a pipeline."""
-    if pipeline_id not in _pipelines_db:
+    manager = get_pipeline_manager()
+    deleted = manager.delete(pipeline_id)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Pipeline not found")
-
-    del _pipelines_db[pipeline_id]
     return {"message": "Pipeline deleted successfully"}
 
 
 @router.post("/{pipeline_id}/execute", response_model=PipelineExecutionResponse)
-async def execute_pipeline(pipeline_id: str, request: ExecutePipelineRequest):
-    """Execute a pipeline."""
-    if pipeline_id not in _pipelines_db:
+async def execute_pipeline(
+    pipeline_id: str,
+    request: ExecutePipelineRequest,
+    req: Request,
+):
+    """Execute a pipeline with nested sub-pipeline support."""
+    from datetime import datetime as _dt
+    from ..pipeline_manager import get_pipeline_manager
+    from agentscope.message import Msg
+
+    manager = get_pipeline_manager()
+    pipeline = manager.get(pipeline_id)
+    if pipeline is None:
         raise HTTPException(status_code=404, detail="Pipeline not found")
 
-    pipeline = _pipelines_db[pipeline_id]
-    execution_id = f"exec_{len(_executions_db) + 1}"
-    now = datetime.utcnow().isoformat()
-
-    execution_data = {
-        "id": execution_id,
-        "pipeline_id": pipeline_id,
-        "status": "running",
-        "result": None,
-        "error": None,
-        "started_at": now,
-        "completed_at": None,
-    }
-
-    _executions_db[execution_id] = execution_data
+    execution_id = f"exec_{pipeline_id}_{_dt.utcnow().strftime('%Y%m%d%H%M%S')}"
 
     try:
-        # TODO: Implement actual pipeline execution
-        # For now, just simulate success
-        execution_data["status"] = "completed"
-        execution_data["result"] = {
-            "message": "Pipeline executed successfully",
-            "agents": pipeline["agents"],
-        }
-        execution_data["completed_at"] = datetime.utcnow().isoformat()
-    except Exception as e:
-        execution_data["status"] = "failed"
-        execution_data["error"] = str(e)
-        execution_data["completed_at"] = datetime.utcnow().isoformat()
+        # Try to get MultiAgentManager from request state if available
+        multi_agent_manager = None
+        if hasattr(req.app.state, "multi_agent_manager"):
+            multi_agent_manager = req.app.state.multi_agent_manager
 
-    return execution_data
+        from copaw.app.pipeline_executor import execute_nested_pipeline
+
+        input_msg = Msg("user", request.message, "user")
+
+        result = await execute_nested_pipeline(
+            pipeline_id=pipeline_id,
+            msg=input_msg,
+            pipeline_manager=manager,
+            multi_agent_manager=multi_agent_manager,
+            context=request.context,
+        )
+
+        return PipelineExecutionResponse(
+            id=execution_id,
+            pipeline_id=pipeline_id,
+            status=result.get("status", "completed"),
+            result=result.get("result"),
+            error=result.get("error"),
+            started_at=_dt.utcnow().isoformat(),
+            completed_at=_dt.utcnow().isoformat(),
+        )
+
+    except Exception as e:
+        logger.error("Pipeline execution failed: %s", e)
+        return PipelineExecutionResponse(
+            id=execution_id,
+            pipeline_id=pipeline_id,
+            status="failed",
+            result=None,
+            error=str(e),
+            started_at=_dt.utcnow().isoformat(),
+            completed_at=_dt.utcnow().isoformat(),
+        )
 
 
 @router.get("/{pipeline_id}/history", response_model=List[PipelineExecutionResponse])
 async def get_pipeline_history(pipeline_id: str):
-    """Get pipeline execution history."""
-    if pipeline_id not in _pipelines_db:
+    """Get execution history for a pipeline (stub)."""
+    manager = get_pipeline_manager()
+    pipeline = manager.get(pipeline_id)
+    if pipeline is None:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+    return []
+
+
+@router.get("/{pipeline_id}/depth")
+async def get_nesting_depth(pipeline_id: str):
+    """Check the nesting depth of a pipeline."""
+    manager = get_pipeline_manager()
+    pipeline = manager.get(pipeline_id)
+    if pipeline is None:
         raise HTTPException(status_code=404, detail="Pipeline not found")
 
-    history = [
-        exec_data
-        for exec_data in _executions_db.values()
-        if exec_data["pipeline_id"] == pipeline_id
-    ]
+    try:
+        from ..pipeline_executor import check_nesting_depth
+        depth = check_nesting_depth(pipeline_id, manager)
+        return {"pipeline_id": pipeline_id, "depth": depth}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    return history
+
+class PipelineSelectOption(BaseModel):
+    """Option for pipeline select dropdown."""
+    value: str
+    label: str
+    owner_agent_id: Optional[str] = None
+    sub_pipeline_count: int = 0
+
+
+@router.get("/select-options", response_model=List[PipelineSelectOption])
+async def get_pipeline_select_options(
+    exclude_id: Optional[str] = Query(None, description="Pipeline ID to exclude"),
+):
+    """Get all pipelines as select options for form dropdowns."""
+    manager = get_pipeline_manager()
+    all_pipelines = manager.list_all()
+    options = []
+    for p in all_pipelines:
+        if p["id"] == exclude_id:
+            continue
+        options.append(PipelineSelectOption(
+            value=p["id"],
+            label=p["name"],
+            owner_agent_id=p.get("owner_agent_id"),
+            sub_pipeline_count=len(p.get("sub_pipelines", [])),
+        ))
+    return options

@@ -8,8 +8,16 @@ export interface Pipeline {
   description?: string;
   config?: Record<string, any>;
   status?: string;
+  owner_agent_id?: string;
+  sub_pipelines?: string[];
+  parent_pipeline_id?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface ListPipelinesParams {
+  owner_agent_id?: string;
+  parent_pipeline_id?: string;
 }
 
 export interface CreatePipelineRequest {
@@ -18,12 +26,18 @@ export interface CreatePipelineRequest {
   agents: string[];
   description?: string;
   config?: Record<string, any>;
+  owner_agent_id?: string;
+  sub_pipelines?: string[];
+  parent_pipeline_id?: string | null;
 }
 
 export interface UpdatePipelineRequest {
   name?: string;
+  type?: string;
+  agents?: string[];
   description?: string;
   config?: Record<string, any>;
+  sub_pipelines?: string[];
 }
 
 export interface ExecutePipelineRequest {
@@ -42,8 +56,12 @@ export interface PipelineExecution {
 }
 
 export const pipelineApi = {
-  list: async (): Promise<Pipeline[]> => {
-    return request<Pipeline[]>("/pipelines/");
+  list: async (params?: ListPipelinesParams): Promise<Pipeline[]> => {
+    const qs = new URLSearchParams();
+    if (params?.owner_agent_id) qs.set("owner_agent_id", params.owner_agent_id);
+    if (params?.parent_pipeline_id) qs.set("parent_pipeline_id", params.parent_pipeline_id);
+    const query = qs.toString();
+    return request<Pipeline[]>(query ? `/pipelines/?${query}` : "/pipelines/");
   },
 
   get: async (id: string): Promise<Pipeline> => {
@@ -85,5 +103,19 @@ export const pipelineApi = {
 
   history: async (id: string): Promise<PipelineExecution[]> => {
     return request<PipelineExecution[]>(`/pipelines/${id}/history`);
+  },
+
+  getSelectOptions: async (excludeId?: string): Promise<Array<{
+    value: string;
+    label: string;
+    owner_agent_id?: string;
+    sub_pipeline_count: number;
+  }>> => {
+    const qs = excludeId ? `?exclude_id=${excludeId}` : '';
+    return request(`/pipelines/select-options${qs}`);
+  },
+
+  getNestingDepth: async (id: string): Promise<{ pipeline_id: string; depth: number }> => {
+    return request(`/pipelines/${id}/depth`);
   },
 };

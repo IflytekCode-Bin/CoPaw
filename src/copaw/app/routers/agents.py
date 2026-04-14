@@ -29,6 +29,7 @@ from ...agents.memory.agent_md_manager import AgentMdManager
 from ...agents.utils import copy_builtin_qa_md_files
 from ...agents.skills_manager import SkillPoolService, get_workspace_skills_dir
 from ..multi_agent_manager import MultiAgentManager
+from ..leader_store import get_leader_store
 from ...constant import WORKING_DIR
 
 logger = logging.getLogger(__name__)
@@ -44,12 +45,20 @@ class AgentSummary(BaseModel):
     description: str
     workspace_dir: str
     enabled: bool
+    is_leader: bool = False
 
 
 class AgentListResponse(BaseModel):
     """Response for listing agents."""
 
     agents: list[AgentSummary]
+    leader_agent: str = ""
+
+
+class SetLeaderRequest(BaseModel):
+    """Request to set leader agent."""
+
+    leader_agent: str | None = None
 
 
 class ReorderAgentsRequest(BaseModel):
@@ -158,6 +167,7 @@ def _read_profile_description(workspace_dir: str) -> str:
 async def list_agents() -> AgentListResponse:
     """List all configured agents."""
     config = load_config()
+    leader_store = get_leader_store()
     ordered_agent_ids = _normalized_agent_order(config)
 
     agents = []
@@ -181,6 +191,7 @@ async def list_agents() -> AgentListResponse:
                     description=description,
                     workspace_dir=agent_ref.workspace_dir,
                     enabled=getattr(agent_ref, "enabled", True),
+                    is_leader=leader_store.is_leader(agent_id),
                 ),
             )
         except Exception:  # noqa: E722
@@ -191,10 +202,51 @@ async def list_agents() -> AgentListResponse:
                     description="",
                     workspace_dir=agent_ref.workspace_dir,
                     enabled=getattr(agent_ref, "enabled", True),
+                    is_leader=leader_store.is_leader(agent_id),
                 ),
             )
 
-    return AgentListResponse(agents=agents)
+    # Collect all leader IDs for backward compatibility
+    leaders = leader_store.get_leaders()
+    first_leader = next(iter(leaders), None)
+    return AgentListResponse(agents=agents, leader_agent=first_leader or "")
+
+
+@router.put(
+    "/leader",
+    summary="Set leader agent",
+    description="Set or clear the leader agent for orchestration.",
+)
+async def set_leader_agent(body: SetLeaderRequest) -> dict:
+    """Set or clear the leader agent.
+
+    Setting leader_agent to null clears the leader.
+    """
+    leader_store = get_leader_store()
+    current_leaders = leader_store.get_leaders()
+
+    # If clearing all leaders
+    if body.leader_agent is None:
+        # Check if any pipelines use current leaders
+        from ..pipeline_manager import get_pipeline_manager
+        pipeline_manager = get_pipeline_manager()
+        for current_leader in current_leaders:
+            pipelines = pipeline_manager.list_all(owner_agent_id=current_leader)
+            if pipelines:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot remove leader: pipelines are using leader '{current_leader}'",
+                )
+        leader_store.set_leaders(set())
+        return {"success": True, "leader_agent": None}
+
+    # If setting a new leader, add it (multi-leader support)
+    leader_store.set_leader(body.leader_agent)
+
+    return {
+        "success": True,
+        "leader_agent": body.leader_agent,
+    }
 
 
 @router.put(
@@ -225,6 +277,39 @@ async def reorder_agents(
     save_config(config)
 
     return {"success": True, "agent_ids": config.agents.agent_order}
+
+
+@router.post("/{agentId}/set-leader", summary="Mark agent as Leader")
+async def set_agent_leader(agentId: str = PathParam(...)) -> dict:
+    """Mark the given agent as a Leader, enabling it to create and manage pipelines."""
+    leader_store = get_leader_store()
+    leader_store.set_leader(agentId)
+    return {"success": True, "agent_id": agentId, "is_leader": True}
+
+
+@router.post("/{agentId}/remove-leader", summary="Remove Leader from agent")
+async def remove_agent_leader(agentId: str = PathParam(...)) -> dict:
+    """Remove the Leader flag from an agent.
+
+    Fails if the agent owns pipelines.
+    """
+    leader_store = get_leader_store()
+    if not leader_store.is_leader(agentId):
+        return {"success": True, "agent_id": agentId, "is_leader": False, "was_leader": False}
+
+    # Check if agent owns pipelines
+    from ..pipeline_manager import get_pipeline_manager
+    pipeline_manager = get_pipeline_manager()
+    owned = pipeline_manager.list_all(owner_agent_id=agentId)
+    if owned:
+        pipeline_names = ", ".join(p["name"] for p in owned)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot remove Leader: agent owns pipelines [{pipeline_names}]",
+        )
+
+    leader_store.remove_leader(agentId)
+    return {"success": True, "agent_id": agentId, "is_leader": False, "was_leader": True}
 
 
 @router.get(
