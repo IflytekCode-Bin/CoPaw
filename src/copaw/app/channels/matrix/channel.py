@@ -154,8 +154,15 @@ class MatrixChannel(BaseChannel):
         self,
         native_payload: Any,
     ) -> AgentRequest:
-        room_id = native_payload["room_id"]
-        sender = native_payload["sender"]
+        # Support both raw payload (room_id/sender at top level) and
+        # merged payload from base merge_native_items (meta.room_id, sender_id).
+        meta = native_payload.get("meta") or {}
+        room_id = native_payload.get("room_id") or meta.get("room_id", "")
+        sender = (
+            native_payload.get("sender")
+            or native_payload.get("sender_id")
+            or ""
+        )
         content_parts = native_payload.get("content_parts") or []
 
         if not content_parts:

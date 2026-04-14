@@ -9,9 +9,12 @@ interface UseAgentsReturn {
   agents: AgentSummary[];
   loading: boolean;
   error: Error | null;
+  leaderAgent: string;
   loadAgents: () => Promise<void>;
   deleteAgent: (agentId: string) => Promise<void>;
   toggleAgent: (agentId: string, enabled: boolean) => Promise<void>;
+  setLeader: (agentId: string) => Promise<void>;
+  removeLeader: (agentId: string) => Promise<void>;
   setAgents: (agents: AgentSummary[]) => void;
 }
 
@@ -20,6 +23,7 @@ export function useAgents(): UseAgentsReturn {
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [leaderAgent, setLeaderAgent] = useState<string>("");
   const { setAgents: updateStoreAgents } = useAgentStore();
   const { message } = useAppMessage();
 
@@ -34,6 +38,7 @@ export function useAgents(): UseAgentsReturn {
     try {
       const data = await agentsApi.listAgents();
       setAgentsState(data.agents);
+      setLeaderAgent(data.leader_agent || "");
     } catch (err) {
       console.error("Failed to load agents:", err);
       const errorMsg =
@@ -70,6 +75,28 @@ export function useAgents(): UseAgentsReturn {
     }
   };
 
+  const setLeader = async (agentId: string) => {
+    try {
+      await agentsApi.setLeader(agentId);
+      message.success(t("agent.setLeaderSuccess", "已设为 Leader"));
+      await loadAgents();
+    } catch (err: any) {
+      message.error(err.message || t("agent.setLeaderFailed", "设为 Leader 失败"));
+      throw err;
+    }
+  };
+
+  const removeLeader = async (agentId: string) => {
+    try {
+      await agentsApi.removeLeader(agentId);
+      message.success(t("agent.removeLeaderSuccess", "已移除 Leader"));
+      await loadAgents();
+    } catch (err: any) {
+      message.error(err.message || t("agent.removeLeaderFailed", "移除 Leader 失败"));
+      throw err;
+    }
+  };
+
   useEffect(() => {
     loadAgents();
   }, []);
@@ -78,9 +105,12 @@ export function useAgents(): UseAgentsReturn {
     agents,
     loading,
     error,
+    leaderAgent,
     loadAgents,
     deleteAgent,
     toggleAgent,
+    setLeader,
+    removeLeader,
     setAgents: setAgentsState,
   };
 }

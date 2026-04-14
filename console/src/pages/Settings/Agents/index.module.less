@@ -131,6 +131,23 @@
   opacity: 0.45;
 }
 
+/* ─── Agent Actions (two-row layout) ───────────────────────────────── */
+
+.agentActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agentActionsRow {
+  display: flex;
+  align-items: center;
+}
+
+.agentActionsRow:global(.ant-space) {
+  flex-wrap: wrap;
+}
+
 .sortableRowDragging {
   background: rgba(24, 144, 255, 0.08);
 }

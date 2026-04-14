@@ -13,7 +13,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { EditOutlined, DeleteOutlined, RobotOutlined, CrownOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, RobotOutlined, CrownOutlined, ApartmentOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { EyeOff, Eye } from "lucide-react";
 import type { AgentSummary } from "../../../../api/types/agents";
 import { useTheme } from "../../../../contexts/ThemeContext";
@@ -25,22 +25,26 @@ interface AgentTableProps {
   agents: AgentSummary[];
   loading: boolean;
   reordering: boolean;
-  leaderAgent?: string | null;
   onEdit: (agent: AgentSummary) => void;
   onDelete: (agentId: string) => void;
   onToggle: (agentId: string, currentEnabled: boolean) => void;
   onReorder: (activeId: string, overId: string) => void;
+  onSetLeader: (agentId: string) => void;
+  onRemoveLeader: (agentId: string) => void;
+  onOrchestration: (agent: AgentSummary) => void;
 }
 
 export function AgentTable({
   agents,
   loading,
   reordering,
-  leaderAgent,
   onEdit,
   onDelete,
   onToggle,
   onReorder,
+  onSetLeader,
+  onRemoveLeader,
+  onOrchestration,
 }: AgentTableProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
@@ -100,7 +104,7 @@ export function AgentTable({
             {getAgentDisplayName(record, t)}
           </span>
           {!record.enabled && <Tag color="error">{t("agent.disabled")}</Tag>}
-          {leaderAgent === record.id && (
+          {record.is_leader && (
             <Tag icon={<CrownOutlined />} color="gold">
               {t("agent.leader", "Leader")}
             </Tag>
@@ -128,74 +132,127 @@ export function AgentTable({
     {
       title: t("common.actions"),
       key: "actions",
-      render: (_: any, record: AgentSummary) => (
-        <Space>
-          <Button
-            type="text"
-            size="middle"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(record)}
-            disabled={record.id === "default"}
-            style={record.id === "default" ? disabledStyle : iconStyle}
-            title={
-              record.id === "default"
-                ? t("agent.defaultNotEditable")
-                : undefined
-            }
-          />
-          <Popconfirm
-            title={
-              record.enabled
-                ? t("agent.disableConfirm")
-                : t("agent.enableConfirm")
-            }
-            description={
-              record.enabled
-                ? t("agent.disableConfirmDesc")
-                : t("agent.enableConfirmDesc")
-            }
-            onConfirm={() => onToggle(record.id, record.enabled)}
-            disabled={record.id === "default"}
-            okText={t("common.confirm")}
-            cancelText={t("common.cancel")}
-          >
-            <Button
-              type="text"
-              size="middle"
-              icon={record.enabled ? <EyeOff size={14} /> : <Eye size={14} />}
-              disabled={record.id === "default"}
-              style={record.id === "default" ? disabledStyle : iconStyle}
-              title={
-                record.id === "default"
-                  ? t("agent.defaultNotDisablable")
-                  : undefined
-              }
-            />
-          </Popconfirm>
-          <Popconfirm
-            title={t("agent.deleteConfirm")}
-            description={t("agent.deleteConfirmDesc")}
-            onConfirm={() => onDelete(record.id)}
-            disabled={record.id === "default"}
-            okText={t("common.confirm")}
-            cancelText={t("common.cancel")}
-          >
-            <Button
-              type="link"
-              size="middle"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={record.id === "default"}
-              style={record.id === "default" ? disabledStyle : undefined}
-              title={
-                record.id === "default"
-                  ? t("agent.defaultNotDeletable")
-                  : undefined
-              }
-            />
-          </Popconfirm>
-        </Space>
-      ),
+      width: 340,
+      render: (_: any, record: AgentSummary) => {
+        const isDefault = record.id === "default";
+        const isLeader = record.is_leader === true;
+
+        return (
+          <div className={styles.agentActions}>
+            <div className={styles.agentActionsRow}>
+              <Space size="small">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit(record)}
+                  disabled={isDefault}
+                  style={isDefault ? disabledStyle : iconStyle}
+                  title={
+                    isDefault
+                      ? t("agent.defaultNotEditable")
+                      : undefined
+                  }
+                />
+                <Popconfirm
+                  title={
+                    record.enabled
+                      ? t("agent.disableConfirm")
+                      : t("agent.enableConfirm")
+                  }
+                  description={
+                    record.enabled
+                      ? t("agent.disableConfirmDesc")
+                      : t("agent.enableConfirmDesc")
+                  }
+                  onConfirm={() => onToggle(record.id, record.enabled)}
+                  disabled={isDefault}
+                  okText={t("common.confirm")}
+                  cancelText={t("common.cancel")}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={record.enabled ? <EyeOff size={14} /> : <Eye size={14} />}
+                    disabled={isDefault}
+                    style={isDefault ? disabledStyle : iconStyle}
+                    title={
+                      isDefault
+                        ? t("agent.defaultNotDisablable")
+                        : undefined
+                    }
+                  />
+                </Popconfirm>
+                {!isLeader && (
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<CrownOutlined />}
+                    onClick={() => onSetLeader(record.id)}
+                  >
+                    {t("agent.setLeader", "设为 Leader")}
+                  </Button>
+                )}
+              </Space>
+            </div>
+            <div className={styles.agentActionsRow}>
+              <Space size="small">
+                {isLeader && (
+                  <Popconfirm
+                    title={t("agent.removeLeaderConfirm", "确认移除 Leader？")}
+                    description={t(
+                      "agent.removeLeaderDesc",
+                      "这将清除当前的 Leader。请确保没有 Pipeline 正在使用它。"
+                    )}
+                    onConfirm={() => onRemoveLeader(record.id)}
+                    okText={t("common.confirm", "确认")}
+                    cancelText={t("common.cancel", "取消")}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CloseCircleOutlined />}
+                      danger
+                    >
+                      {t("agent.removeLeader", "移除 Leader")}
+                    </Button>
+                  </Popconfirm>
+                )}
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<ApartmentOutlined />}
+                  onClick={() => onOrchestration(record)}
+                >
+                  {t("agent.orchestration", "智能体编排管理")}
+                </Button>
+                <Popconfirm
+                  title={t("agent.deleteConfirm")}
+                  description={t("agent.deleteConfirmDesc")}
+                  onConfirm={() => onDelete(record.id)}
+                  disabled={isDefault}
+                  okText={t("common.confirm")}
+                  cancelText={t("common.cancel")}
+                >
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={isDefault}
+                    style={isDefault ? disabledStyle : undefined}
+                    title={
+                      isDefault
+                        ? t("agent.defaultNotDeletable")
+                        : undefined
+                    }
+                  />
+                </Popconfirm>
+              </Space>
+            </div>
+          </div>
+        );
+      },
     },
   ];
 

@@ -713,6 +713,10 @@ class AgentsConfig(BaseModel):
         default_factory=lambda: ["default"],
         description="Persisted UI order for configured agents",
     )
+    leader_agent: Optional[str] = Field(
+        default=None,
+        description="Leader agent ID for orchestration (multi-agent pipeline)",
+    )
     profiles: Dict[str, AgentProfileRef] = Field(
         default_factory=lambda: {
             "default": AgentProfileRef(

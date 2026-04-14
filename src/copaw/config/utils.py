@@ -51,26 +51,21 @@ def _normalize_working_dir_bound_paths(data: object) -> object:
     legacy_root_tilde = "~/.copaw"
     legacy_root_abs = str(Path(legacy_root_tilde).expanduser().resolve())
     new_root_abs = str(WORKING_DIR)
+    # Tilde-form of new_root for paths stored as ~/... in config
+    new_root_tilde = "~/" + str(Path(new_root_abs).relative_to(Path.home()))
 
     def _rewrite_path_value(v: object) -> object:
         if not isinstance(v, str) or not v:
             return v
-        
-        # 先修复重复追加的路径（如 .copaw_dev_dev_dev）
-        v = re.sub(r'\.copaw_(dev|test|ops|worker)(_\1)+', r'.copaw_\1', v)
-        
-        # 如果路径已经指向正确的 WORKING_DIR，保持不变
+        # If path already points to current WORKING_DIR, leave it alone
         if v.startswith(new_root_abs + "/") or v == new_root_abs:
             return v
-        
-        # 然后处理 legacy 路径替换
-        if v.startswith(legacy_root_tilde):
+        if v.startswith(new_root_tilde + "/") or v == new_root_tilde:
+            return v
+        if v.startswith(legacy_root_tilde + "/") or v == legacy_root_tilde:
             return new_root_abs + v[len(legacy_root_tilde) :]
-        if v.startswith(legacy_root_abs + "/"):
+        if v.startswith(legacy_root_abs + "/") or v == legacy_root_abs:
             return new_root_abs + v[len(legacy_root_abs) :]
-        if v == legacy_root_abs:
-            return new_root_abs
-            
         return v
 
     def _walk(obj: object, key: str | None = None) -> object:
