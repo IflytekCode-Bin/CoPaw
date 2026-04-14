@@ -1,0 +1,219 @@
+/* Pipeline Canvas Editor base styles */
+
+.pipelineCanvas {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  background: var(--copaw-bg, #f5f5f5);
+}
+
+.pipelineCanvas :global(.react-flow__node) {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pipelineCanvas :global(.react-flow__edge-path) {
+  stroke: #b1b1b7;
+  stroke-width: 2;
+}
+
+.pipelineCanvas :global(.react-flow__edge.selected .react-flow__edge-path) {
+  stroke: #1677ff;
+}
+
+.pipelineCanvas :global(.react-flow__controls) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #d9d9d9;
+}
+
+.pipelineCanvas :global(.react-flow__attribution) {
+  display: none;
+}
+
+/* Node palette */
+.nodePalette {
+  width: 200px;
+  background: #fff;
+  border-right: 1px solid #f0f0f0;
+  padding: 12px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.nodePalette h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.paletteItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: grab;
+  background: #fafafa;
+  transition: all 0.2s;
+  user-select: none;
+  font-size: 13px;
+}
+
+.paletteItem:hover {
+  border-color: #1677ff;
+  background: #e6f4ff;
+}
+
+.paletteItem:active {
+  cursor: grabbing;
+}
+
+.paletteItem .icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+/* Node wrapper (common styles for all node types) */
+.canvasNode {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-width: 180px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.canvasNode:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.canvasNode.selected {
+  border-color: #1677ff;
+}
+
+.canvasNodeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px 6px 0 0;
+  font-weight: 500;
+  font-size: 13px;
+  color: #fff;
+}
+
+.canvasNodeHeader.start { background: #52c41a; }
+.canvasNodeHeader.end { background: #ff4d4f; }
+.canvasNodeHeader.agent { background: #1677ff; }
+.canvasNodeHeader.parallel { background: #722ed1; }
+.canvasNodeHeader.branch { background: #fa8c16; }
+.canvasNodeHeader.loop { background: #13c2c2; }
+.canvasNodeHeader.sub_pipeline { background: #eb2f96; }
+
+.canvasNodeBody {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.canvasNodeBody .agentName {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+}
+
+/* Container nodes (loop, parallel) */
+.containerNode {
+  min-width: 300px;
+  min-height: 200px;
+  background: #fafafa;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+}
+
+.containerNode .containerInner {
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  position: relative;
+}
+
+.containerNode .containerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  border-radius: 6px 6px 0 0;
+}
+
+/* Config panel */
+.configPanel {
+  width: 320px;
+  background: #fff;
+  border-left: 1px solid #f0f0f0;
+  padding: 16px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.configPanel h4 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Toolbar */
+.canvasToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.canvasToolbar .leftActions,
+.canvasToolbar .rightActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Editor layout */
+.editorLayout {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 200px);
+  min-height: 500px;
+}
+
+.editorLayout .canvasArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Edge label */
+.edgeLabel {
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid #d9d9d9;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.edgeLabel.condition {
+  border-color: #fa8c16;
+  color: #fa8c16;
+}
+
+/* Drop zone highlight */
+.dropZoneHighlight {
+  outline: 2px dashed #1677ff;
+  outline-offset: -2px;
+}

@@ -1,0 +1,73 @@
+/* ─── Pipeline Management Drawer ───────────────────────────────── */
+
+.pipelineDrawer :global(.ant-drawer-body) {
+  padding: 0;
+}
+
+.pipelineDrawer :global(.ant-drawer-header) {
+  padding: 16px 24px;
+}
+
+.warningBanner {
+  background: #fff7e6;
+  border: 1px solid #ffd666;
+  border-radius: 6px;
+  padding: 10px 16px;
+  margin: 0 16px 12px;
+  font-size: 13px;
+  color: #d46b08;
+}
+
+.emptyText {
+  color: #bfbfbf;
+}
+
+/* ─── View Detail ───────────────────────────────── */
+
+.viewContent {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0;
+}
+
+.viewField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #8c8c8c;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  span {
+    font-size: 14px;
+    color: #333;
+  }
+}
+
+/* ─── Pipeline Form ───────────────────────────────── */
+
+.formContent {
+  padding-bottom: 24px;
+}
+
+.formActions {
+  margin-top: 8px;
+}
+
+/* ─── Skeleton & Error ───────────────────────────────── */
+
+.skeletonWrapper {
+  padding: 16px;
+}
+
+.errorState {
+  padding: 32px;
+  text-align: center;
+  color: #999;
+}
